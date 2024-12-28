@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export const Hero = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="relative min-h-screen flex items-center">
       <div className="absolute inset-0 bg-gradient-to-br from-white to-secondary/20 -z-10" />
@@ -25,17 +28,9 @@ export const Hero = () => {
             <Button
               size="lg"
               className="bg-primary hover:bg-primary/90 text-white"
-              onClick={() => console.log("Brand signup clicked")}
+              onClick={() => navigate("/get-started")}
             >
-              I'm a Brand
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-primary text-primary hover:bg-primary/10"
-              onClick={() => console.log("Creator signup clicked")}
-            >
-              I'm a Creator
+              Get Started
             </Button>
           </div>
 
