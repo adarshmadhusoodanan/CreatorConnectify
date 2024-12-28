@@ -15,24 +15,15 @@ const GetStarted = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session);
       
-      if (event === "SIGNED_IN" && session) {
+      if (event === "SIGNED_IN" && session && selectedType) {
         try {
-          // Get user type from profiles
-          const { data: profile, error: profileError } = await supabase
-            .from("profiles")
-            .select("user_type")
-            .eq("id", session.user.id)
-            .single();
-
-          if (profileError) throw profileError;
-
-          console.log("User profile:", profile);
-
-          // Create corresponding brand or creator profile if it doesn't exist
-          if (profile.user_type === "brand") {
+          if (selectedType === "brand") {
             const { error: brandError } = await supabase
               .from("brands")
-              .insert([{ user_id: session.user.id, name: session.user.email?.split("@")[0] || "New Brand" }])
+              .insert([{ 
+                user_id: session.user.id, 
+                name: session.user.email?.split("@")[0] || "New Brand" 
+              }])
               .select()
               .single();
 
@@ -44,7 +35,10 @@ const GetStarted = () => {
           } else {
             const { error: creatorError } = await supabase
               .from("creators")
-              .insert([{ user_id: session.user.id, name: session.user.email?.split("@")[0] || "New Creator" }])
+              .insert([{ 
+                user_id: session.user.id, 
+                name: session.user.email?.split("@")[0] || "New Creator" 
+              }])
               .select()
               .single();
 
@@ -57,7 +51,7 @@ const GetStarted = () => {
 
           toast({
             title: "Welcome!",
-            description: `Successfully signed in as a ${profile.user_type}`,
+            description: `Successfully signed in as a ${selectedType}`,
           });
         } catch (error) {
           console.error("Error setting up profile:", error);
@@ -73,30 +67,11 @@ const GetStarted = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate, toast]);
+  }, [navigate, toast, selectedType]);
 
   const handleTypeSelect = async (type: "brand" | "creator") => {
     console.log(`Selected user type: ${type}`);
     setSelectedType(type);
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session?.user) {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ user_type: type })
-        .eq("id", session.user.id);
-
-      if (error) {
-        console.error("Error updating profile:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to update profile type",
-        });
-        return;
-      }
-    }
   };
 
   return (
