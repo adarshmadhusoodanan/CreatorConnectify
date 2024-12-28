@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,39 +11,93 @@ const GetStarted = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session);
+      
+      if (event === "SIGNED_IN" && session) {
+        try {
+          // Get user type from profiles
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("user_type")
+            .eq("id", session.user.id)
+            .single();
+
+          if (profileError) throw profileError;
+
+          console.log("User profile:", profile);
+
+          // Create corresponding brand or creator profile if it doesn't exist
+          if (profile.user_type === "brand") {
+            const { error: brandError } = await supabase
+              .from("brands")
+              .insert([{ user_id: session.user.id, name: session.user.email?.split("@")[0] || "New Brand" }])
+              .select()
+              .single();
+
+            if (brandError && !brandError.message.includes("unique")) {
+              throw brandError;
+            }
+
+            navigate("/dashboard/brand");
+          } else {
+            const { error: creatorError } = await supabase
+              .from("creators")
+              .insert([{ user_id: session.user.id, name: session.user.email?.split("@")[0] || "New Creator" }])
+              .select()
+              .single();
+
+            if (creatorError && !creatorError.message.includes("unique")) {
+              throw creatorError;
+            }
+
+            navigate("/dashboard/creator");
+          }
+
+          toast({
+            title: "Welcome!",
+            description: `Successfully signed in as a ${profile.user_type}`,
+          });
+        } catch (error) {
+          console.error("Error setting up profile:", error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "There was a problem setting up your profile",
+          });
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate, toast]);
+
   const handleTypeSelect = async (type: "brand" | "creator") => {
-    setSelectedType(type);
     console.log(`Selected user type: ${type}`);
-  };
+    setSelectedType(type);
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.user) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ user_type: type })
+        .eq("id", session.user.id);
 
-  // Listen for auth state changes
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    console.log("Auth state changed:", event);
-    if (event === "SIGNED_IN" && session && selectedType) {
-      try {
-        // Insert user profile with selected type
-        const { error } = await supabase
-          .from("profiles")
-          .insert([{ id: session.user.id, user_type: selectedType }]);
-
-        if (error) throw error;
-
-        toast({
-          title: "Welcome!",
-          description: `Successfully signed in as a ${selectedType}`,
-        });
-        
-        navigate("/dashboard");
-      } catch (error) {
-        console.error("Error creating profile:", error);
+      if (error) {
+        console.error("Error updating profile:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "There was a problem creating your profile",
+          description: "Failed to update profile type",
         });
+        return;
       }
     }
-  });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-secondary/20 py-16 px-4 sm:px-6 lg:px-8">
