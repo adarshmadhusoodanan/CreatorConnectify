@@ -77,14 +77,16 @@ const GetStarted = () => {
             title: "Welcome!",
             description: `Successfully signed in as a ${selectedType}`,
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error setting up profile:", error);
           toast({
             variant: "destructive",
             title: "Error",
-            description: "There was a problem setting up your profile",
+            description: error.message || "There was a problem setting up your profile",
           });
         }
+      } else if (event === "SIGNED_OUT") {
+        navigate("/");
       }
     });
 
@@ -157,6 +159,15 @@ const GetStarted = () => {
                   },
                 }}
                 providers={[]}
+                redirectTo={window.location.origin}
+                onError={(error) => {
+                  console.error("Auth error:", error);
+                  toast({
+                    variant: "destructive",
+                    title: "Authentication Error",
+                    description: error.message,
+                  });
+                }}
               />
             </div>
           )}
