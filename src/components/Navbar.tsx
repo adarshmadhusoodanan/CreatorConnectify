@@ -1,10 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -13,6 +18,50 @@ export const Navbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleLogin = async () => {
+    console.log("Checking existing session...");
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      console.log("User is logged in, checking profiles...");
+      // Check if user has a brand profile
+      const { data: brand } = await supabase
+        .from("brands")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (brand) {
+        console.log("Brand profile found, navigating to brand dashboard...");
+        navigate("/dashboard/brand");
+        return;
+      }
+
+      // Check if user has a creator profile
+      const { data: creator } = await supabase
+        .from("creators")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (creator) {
+        console.log("Creator profile found, navigating to creator dashboard...");
+        navigate("/dashboard/creator");
+        return;
+      }
+
+      console.log("No profile found, navigating to get started...");
+      navigate("/get-started");
+    } else {
+      console.log("No session found, navigating to get started...");
+      navigate("/get-started");
+    }
+  };
+
+  const handleGetStarted = () => {
+    navigate("/get-started");
+  };
 
   return (
     <nav
@@ -53,13 +102,13 @@ export const Navbar = () => {
             <Button
               variant="ghost"
               className="text-gray-700 hover:text-primary"
-              onClick={() => console.log("Login clicked")}
+              onClick={handleLogin}
             >
               Login
             </Button>
             <Button
               className="bg-primary hover:bg-primary/90 text-white"
-              onClick={() => console.log("Get Started clicked")}
+              onClick={handleGetStarted}
             >
               Get Started
             </Button>
@@ -107,13 +156,13 @@ export const Navbar = () => {
                 <Button
                   variant="ghost"
                   className="w-full text-left mb-2"
-                  onClick={() => console.log("Login clicked")}
+                  onClick={handleLogin}
                 >
                   Login
                 </Button>
                 <Button
                   className="w-full bg-primary hover:bg-primary/90 text-white"
-                  onClick={() => console.log("Get Started clicked")}
+                  onClick={handleGetStarted}
                 >
                   Get Started
                 </Button>
