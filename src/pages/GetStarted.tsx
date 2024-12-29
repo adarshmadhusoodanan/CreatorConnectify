@@ -23,9 +23,9 @@ const GetStarted = () => {
               .from("brands")
               .select("id")
               .eq("user_id", session.user.id)
-              .single();
+              .maybeSingle();
 
-            if (fetchError && !fetchError.message.includes("No rows found")) {
+            if (fetchError) {
               throw fetchError;
             }
 
@@ -50,9 +50,9 @@ const GetStarted = () => {
               .from("creators")
               .select("id")
               .eq("user_id", session.user.id)
-              .single();
+              .maybeSingle();
 
-            if (fetchError && !fetchError.message.includes("No rows found")) {
+            if (fetchError) {
               throw fetchError;
             }
 
@@ -160,14 +160,6 @@ const GetStarted = () => {
                 }}
                 providers={[]}
                 redirectTo={window.location.origin}
-                onError={(error) => {
-                  console.error("Auth error:", error);
-                  toast({
-                    variant: "destructive",
-                    title: "Authentication Error",
-                    description: error.message,
-                  });
-                }}
               />
             </div>
           )}
