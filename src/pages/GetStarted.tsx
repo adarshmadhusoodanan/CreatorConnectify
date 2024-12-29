@@ -18,32 +18,56 @@ const GetStarted = () => {
       if (event === "SIGNED_IN" && session && selectedType) {
         try {
           if (selectedType === "brand") {
-            const { error: brandError } = await supabase
+            // First check if brand profile exists
+            const { data: existingBrand, error: fetchError } = await supabase
               .from("brands")
-              .insert([{ 
-                user_id: session.user.id, 
-                name: session.user.email?.split("@")[0] || "New Brand" 
-              }])
-              .select()
+              .select("id")
+              .eq("user_id", session.user.id)
               .single();
 
-            if (brandError && !brandError.message.includes("unique")) {
-              throw brandError;
+            if (fetchError && !fetchError.message.includes("No rows found")) {
+              throw fetchError;
+            }
+
+            if (!existingBrand) {
+              // Only create if doesn't exist
+              const { error: brandError } = await supabase
+                .from("brands")
+                .insert([{ 
+                  user_id: session.user.id, 
+                  name: session.user.email?.split("@")[0] || "New Brand" 
+                }]);
+
+              if (brandError) {
+                throw brandError;
+              }
             }
 
             navigate("/dashboard/brand");
           } else {
-            const { error: creatorError } = await supabase
+            // First check if creator profile exists
+            const { data: existingCreator, error: fetchError } = await supabase
               .from("creators")
-              .insert([{ 
-                user_id: session.user.id, 
-                name: session.user.email?.split("@")[0] || "New Creator" 
-              }])
-              .select()
+              .select("id")
+              .eq("user_id", session.user.id)
               .single();
 
-            if (creatorError && !creatorError.message.includes("unique")) {
-              throw creatorError;
+            if (fetchError && !fetchError.message.includes("No rows found")) {
+              throw fetchError;
+            }
+
+            if (!existingCreator) {
+              // Only create if doesn't exist
+              const { error: creatorError } = await supabase
+                .from("creators")
+                .insert([{ 
+                  user_id: session.user.id, 
+                  name: session.user.email?.split("@")[0] || "New Creator" 
+                }]);
+
+              if (creatorError) {
+                throw creatorError;
+              }
             }
 
             navigate("/dashboard/creator");
