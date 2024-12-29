@@ -18,7 +18,7 @@ const GetStarted = () => {
       if (event === "SIGNED_IN" && session && selectedType) {
         try {
           if (selectedType === "brand") {
-            // First check if brand profile exists
+            // Check if brand profile exists
             const { data: existingBrand, error: fetchError } = await supabase
               .from("brands")
               .select("id")
@@ -30,7 +30,7 @@ const GetStarted = () => {
             }
 
             if (!existingBrand) {
-              // Only create if doesn't exist
+              // Create brand profile if it doesn't exist
               const { error: brandError } = await supabase
                 .from("brands")
                 .insert([{ 
@@ -45,7 +45,7 @@ const GetStarted = () => {
 
             navigate("/dashboard/brand");
           } else {
-            // First check if creator profile exists
+            // Check if creator profile exists
             const { data: existingCreator, error: fetchError } = await supabase
               .from("creators")
               .select("id")
@@ -57,7 +57,7 @@ const GetStarted = () => {
             }
 
             if (!existingCreator) {
-              // Only create if doesn't exist
+              // Create creator profile if it doesn't exist
               const { error: creatorError } = await supabase
                 .from("creators")
                 .insert([{ 
@@ -89,6 +89,38 @@ const GetStarted = () => {
         navigate("/");
       }
     });
+
+    // Check if user is already logged in
+    const checkExistingSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Check if user has a brand profile
+        const { data: brand } = await supabase
+          .from("brands")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        if (brand) {
+          navigate("/dashboard/brand");
+          return;
+        }
+
+        // Check if user has a creator profile
+        const { data: creator } = await supabase
+          .from("creators")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        if (creator) {
+          navigate("/dashboard/creator");
+          return;
+        }
+      }
+    };
+
+    checkExistingSession();
 
     return () => {
       subscription.unsubscribe();
