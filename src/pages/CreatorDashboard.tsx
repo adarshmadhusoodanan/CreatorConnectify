@@ -4,7 +4,6 @@ import { Search, Globe } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardNavbar } from "@/components/DashboardNavbar";
-import { NavbarProvider } from "@/contexts/NavbarContext";
 
 const CreatorDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,10 +31,9 @@ const CreatorDashboard = () => {
   });
 
   return (
-    <NavbarProvider>
-      <div className="min-h-screen bg-background">
-        <DashboardNavbar userType="creator" />
-        <div className="transition-all duration-300 p-8" style={{ marginLeft: "5rem" }}>
+    <div className="min-h-screen bg-background">
+      <DashboardNavbar userType="creator" />
+      <div className="ml-64 p-8">
         <h1 className="text-3xl font-bold mb-8">Find Brands</h1>
         
         <div className="relative mb-8">
@@ -93,9 +91,8 @@ const CreatorDashboard = () => {
             ))}
           </div>
         )}
-        </div>
       </div>
-    </NavbarProvider>
+    </div>
   );
 };
 

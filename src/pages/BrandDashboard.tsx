@@ -4,7 +4,6 @@ import { Search, Instagram, Twitter, Youtube } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardNavbar } from "@/components/DashboardNavbar";
-import { NavbarProvider } from "@/contexts/NavbarContext";
 
 const BrandDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,10 +31,9 @@ const BrandDashboard = () => {
   });
 
   return (
-    <NavbarProvider>
-      <div className="min-h-screen bg-background">
-        <DashboardNavbar userType="brand" />
-        <div className="transition-all duration-300 p-8" style={{ marginLeft: "5rem" }}>
+    <div className="min-h-screen bg-background">
+      <DashboardNavbar userType="brand" />
+      <div className="ml-64 p-8">
         <h1 className="text-3xl font-bold mb-8">Find Creators</h1>
         
         <div className="relative mb-8">
@@ -114,9 +112,8 @@ const BrandDashboard = () => {
             ))}
           </div>
         )}
-        </div>
       </div>
-    </NavbarProvider>
+    </div>
   );
 };
 
