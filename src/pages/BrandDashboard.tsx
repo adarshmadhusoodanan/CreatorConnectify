@@ -5,10 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardNavbar } from "@/components/DashboardNavbar";
 import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { isExpanded } = useNavbar();
+  const isMobile = useIsMobile();
 
   const { data: creators, isLoading } = useQuery({
     queryKey: ["creators", searchQuery],
@@ -33,7 +35,10 @@ const DashboardContent = () => {
   });
 
   return (
-    <div className={`min-h-screen bg-background transition-all duration-300 ${isExpanded ? 'ml-64' : 'ml-20'}`}>
+    <div className={`min-h-screen bg-background transition-all duration-300 
+      ${!isMobile && (isExpanded ? 'ml-64' : 'ml-20')}
+      ${isMobile ? 'ml-0' : ''}
+    `}>
       <div className="p-8">
         <h1 className="text-3xl font-bold mb-8">Find Creators</h1>
         

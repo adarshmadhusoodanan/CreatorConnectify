@@ -7,6 +7,7 @@ import { LogOut, Instagram, Twitter, Youtube, Link, User, ChevronLeft, ChevronRi
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavbar } from "@/contexts/NavbarContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardNavbarProps {
   userType: "brand" | "creator";
@@ -18,6 +19,7 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
   const [profile, setProfile] = useState<any>(null);
   const [keywords, setKeywords] = useState<string>("");
   const { isExpanded, toggleNavbar } = useNavbar();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -56,8 +58,31 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
     navigate("/");
   };
 
+  if (isMobile && !isExpanded) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        className="fixed top-4 left-4 z-50"
+        onClick={toggleNavbar}
+      >
+        <Avatar className="h-10 w-10">
+          <AvatarImage src={profile?.image_url} alt={profile?.name} />
+          <AvatarFallback>
+            <User className="h-5 w-5" />
+          </AvatarFallback>
+        </Avatar>
+      </Button>
+    );
+  }
+
   return (
-    <nav className={`fixed left-0 top-0 h-screen bg-background border-r p-4 flex flex-col transition-all duration-300 ${isExpanded ? 'w-64' : 'w-20'}`}>
+    <nav 
+      className={`fixed left-0 top-0 h-screen bg-background border-r p-4 flex flex-col transition-all duration-300 z-40
+        ${isExpanded ? 'w-64' : 'w-20'}
+        ${isMobile ? (isExpanded ? 'translate-x-0' : '-translate-x-full') : ''}
+      `}
+    >
       <div className="flex flex-col items-center gap-4 mb-8">
         <Avatar className={`${isExpanded ? 'h-16 w-16' : 'h-10 w-10'} transition-all duration-300`}>
           <AvatarImage src={profile?.image_url} alt={profile?.name} />
@@ -80,14 +105,16 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
         </div>
       </div>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute -right-3 top-8 bg-background border rounded-full shadow-md"
-        onClick={toggleNavbar}
-      >
-        {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-      </Button>
+      {!isMobile && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute -right-3 top-8 bg-background border rounded-full shadow-md"
+          onClick={toggleNavbar}
+        >
+          {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </Button>
+      )}
 
       <div className="flex flex-col gap-4 mt-auto">
         {userType === "creator" && isExpanded ? (

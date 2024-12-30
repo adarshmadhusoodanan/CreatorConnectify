@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NavbarContextType {
   isExpanded: boolean;
@@ -8,7 +9,8 @@ interface NavbarContextType {
 const NavbarContext = createContext<NavbarContextType | undefined>(undefined);
 
 export function NavbarProvider({ children }: { children: ReactNode }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const isMobile = useIsMobile();
+  const [isExpanded, setIsExpanded] = useState(!isMobile);
 
   const toggleNavbar = () => {
     console.log("Toggling navbar state:", !isExpanded);
