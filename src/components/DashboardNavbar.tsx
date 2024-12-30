@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LogOut, Instagram, Twitter, Youtube, Link, User } from "lucide-react";
+import { LogOut, Instagram, Twitter, Youtube, Link, User, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useNavbar } from "@/contexts/NavbarContext";
 
 interface DashboardNavbarProps {
   userType: "brand" | "creator";
@@ -16,6 +17,7 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<any>(null);
   const [keywords, setKeywords] = useState<string>("");
+  const { isExpanded, toggleNavbar } = useNavbar();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -55,27 +57,40 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
   };
 
   return (
-    <nav className="fixed left-0 top-0 h-screen w-64 bg-background border-r p-4 flex flex-col">
+    <nav className={`fixed left-0 top-0 h-screen bg-background border-r p-4 flex flex-col transition-all duration-300 ${isExpanded ? 'w-64' : 'w-20'}`}>
       <div className="flex flex-col items-center gap-4 mb-8">
-        <Avatar className="h-16 w-16">
+        <Avatar className={`${isExpanded ? 'h-16 w-16' : 'h-10 w-10'} transition-all duration-300`}>
           <AvatarImage src={profile?.image_url} alt={profile?.name} />
           <AvatarFallback>
-            <User className="h-8 w-8" />
+            <User className={`${isExpanded ? 'h-8 w-8' : 'h-5 w-5'}`} />
           </AvatarFallback>
         </Avatar>
-        <div className="flex flex-col items-center">
-          <span className="font-semibold text-lg">{profile?.name}</span>
-          <Input
-            className="mt-2 w-full text-sm"
-            placeholder="Add promotion keywords..."
-            value={keywords}
-            onChange={(e) => setKeywords(e.target.value)}
-          />
+        <div className={`flex flex-col items-center ${isExpanded ? 'w-full' : 'w-10'}`}>
+          {isExpanded && (
+            <>
+              <span className="font-semibold text-lg">{profile?.name}</span>
+              <Input
+                className="mt-2 w-full text-sm"
+                placeholder="Add promotion keywords..."
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+              />
+            </>
+          )}
         </div>
       </div>
 
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute -right-3 top-8 bg-background border rounded-full shadow-md"
+        onClick={toggleNavbar}
+      >
+        {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </Button>
+
       <div className="flex flex-col gap-4 mt-auto">
-        {userType === "creator" ? (
+        {userType === "creator" && isExpanded ? (
           <div className="flex justify-center gap-4">
             {profile?.instagram_link && (
               <a
@@ -108,26 +123,25 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
               </a>
             )}
           </div>
-        ) : (
-          profile?.website_url && (
-            <a
-              href={profile.website_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1 text-primary hover:text-primary/90"
-            >
-              <Link className="h-5 w-5" />
-              Website
-            </a>
-          )
+        ) : null}
+        {isExpanded && userType === "brand" && profile?.website_url && (
+          <a
+            href={profile.website_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1 text-primary hover:text-primary/90"
+          >
+            <Link className="h-5 w-5" />
+            Website
+          </a>
         )}
         <Button
           variant="ghost"
           onClick={handleLogout}
-          className="w-full text-gray-500 hover:text-gray-700"
+          className={`w-full text-gray-500 hover:text-gray-700 ${!isExpanded && 'px-2'}`}
         >
-          <LogOut className="h-5 w-5 mr-2" />
-          Logout
+          <LogOut className="h-5 w-5" />
+          {isExpanded && <span className="ml-2">Logout</span>}
         </Button>
       </div>
     </nav>

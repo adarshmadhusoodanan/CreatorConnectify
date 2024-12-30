@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Instagram, Twitter, Youtube } from "lucide-react";
+import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardNavbar } from "@/components/DashboardNavbar";
+import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
 
-const BrandDashboard = () => {
+const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const { isExpanded } = useNavbar();
 
   const { data: creators, isLoading } = useQuery({
     queryKey: ["creators", searchQuery],
@@ -31,9 +33,8 @@ const BrandDashboard = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardNavbar userType="brand" />
-      <div className="ml-64 p-8">
+    <div className={`min-h-screen bg-background transition-all duration-300 ${isExpanded ? 'ml-64' : 'ml-20'}`}>
+      <div className="p-8">
         <h1 className="text-3xl font-bold mb-8">Find Creators</h1>
         
         <div className="relative mb-8">
@@ -75,38 +76,6 @@ const BrandDashboard = () => {
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                     {creator.bio}
                   </p>
-                  <div className="flex space-x-4">
-                    {creator.instagram_link && (
-                      <a
-                        href={creator.instagram_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-pink-600 hover:text-pink-700"
-                      >
-                        <Instagram className="h-5 w-5" />
-                      </a>
-                    )}
-                    {creator.twitter_link && (
-                      <a
-                        href={creator.twitter_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-500"
-                      >
-                        <Twitter className="h-5 w-5" />
-                      </a>
-                    )}
-                    {creator.youtube_link && (
-                      <a
-                        href={creator.youtube_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Youtube className="h-5 w-5" />
-                      </a>
-                    )}
-                  </div>
                 </div>
               </div>
             ))}
@@ -114,6 +83,15 @@ const BrandDashboard = () => {
         )}
       </div>
     </div>
+  );
+};
+
+const BrandDashboard = () => {
+  return (
+    <NavbarProvider>
+      <DashboardNavbar userType="brand" />
+      <DashboardContent />
+    </NavbarProvider>
   );
 };
 

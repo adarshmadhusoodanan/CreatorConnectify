@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Globe } from "lucide-react";
+import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardNavbar } from "@/components/DashboardNavbar";
+import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
 
-const CreatorDashboard = () => {
+const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const { isExpanded } = useNavbar();
 
   const { data: brands, isLoading } = useQuery({
     queryKey: ["brands", searchQuery],
@@ -31,9 +33,8 @@ const CreatorDashboard = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardNavbar userType="creator" />
-      <div className="ml-64 p-8">
+    <div className={`min-h-screen bg-background transition-all duration-300 ${isExpanded ? 'ml-64' : 'ml-20'}`}>
+      <div className="p-8">
         <h1 className="text-3xl font-bold mb-8">Find Brands</h1>
         
         <div className="relative mb-8">
@@ -75,17 +76,6 @@ const CreatorDashboard = () => {
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                     {brand.description}
                   </p>
-                  {brand.website_url && (
-                    <a
-                      href={brand.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center text-primary hover:text-primary/90"
-                    >
-                      <Globe className="h-5 w-5 mr-2" />
-                      Visit Website
-                    </a>
-                  )}
                 </div>
               </div>
             ))}
@@ -93,6 +83,15 @@ const CreatorDashboard = () => {
         )}
       </div>
     </div>
+  );
+};
+
+const CreatorDashboard = () => {
+  return (
+    <NavbarProvider>
+      <DashboardNavbar userType="creator" />
+      <DashboardContent />
+    </NavbarProvider>
   );
 };
 
