@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { LogOut, Instagram, Twitter, Youtube, Link, User, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { LogOut, Instagram, Twitter, Youtube, Link, User, ChevronLeft, ChevronRight, X, UserCog, Globe, Contact } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavbar } from "@/contexts/NavbarContext";
@@ -17,7 +16,6 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profile, setProfile] = useState<any>(null);
-  const [keywords, setKeywords] = useState<string>("");
   const { isExpanded, toggleNavbar } = useNavbar();
   const isMobile = useIsMobile();
 
@@ -104,15 +102,7 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
 
       <div className={`flex flex-col items-center ${isExpanded ? 'w-full' : 'w-10'}`}>
         {isExpanded && (
-          <>
-            <span className="font-semibold text-lg">{profile?.name}</span>
-            <Input
-              className="mt-2 w-full text-sm"
-              placeholder="Add promotion keywords..."
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-            />
-          </>
+          <span className="font-semibold text-lg mb-4">{profile?.name}</span>
         )}
       </div>
 
@@ -125,6 +115,23 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
         >
           {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </Button>
+      )}
+
+      {isExpanded && (
+        <div className="flex flex-col gap-2 mt-4">
+          <Button variant="ghost" className="justify-start">
+            <UserCog className="h-5 w-5 mr-2" />
+            Edit Profile
+          </Button>
+          <Button variant="ghost" className="justify-start">
+            <Globe className="h-5 w-5 mr-2" />
+            Website
+          </Button>
+          <Button variant="ghost" className="justify-start">
+            <Contact className="h-5 w-5 mr-2" />
+            Contacts
+          </Button>
+        </div>
       )}
 
       <div className="flex flex-col gap-4 mt-auto">
