@@ -67,7 +67,7 @@ const DashboardContent = () => {
             {brands?.map((brand) => (
               <div
                 key={brand.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden"
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
               >
                 <div className="aspect-w-16 aspect-h-9">
                   <img
@@ -77,7 +77,7 @@ const DashboardContent = () => {
                   />
                 </div>
                 <div className="p-4">
-                  <h3 className="text-lg font-semibold mb-2">{brand.name}</h3>
+                  <h3 className="text-lg font-semibold text-center mb-2">{brand.name}</h3>
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                     {brand.description}
                   </p>
