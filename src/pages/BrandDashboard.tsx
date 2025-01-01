@@ -39,7 +39,7 @@ const DashboardContent = () => {
       ${!isMobile && (isExpanded ? 'ml-64' : 'ml-20')}
       ${isMobile ? 'ml-0' : ''}
     `}>
-      <div className="p-8">
+      <div className="p-8 pt-20 md:pt-8">
         <h1 className="text-3xl font-bold mb-8">Find Creators</h1>
         
         <div className="relative mb-8">
