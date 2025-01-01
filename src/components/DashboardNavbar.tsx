@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LogOut, Instagram, Twitter, Youtube, Link, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut, Instagram, Twitter, Youtube, Link, User, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavbar } from "@/contexts/NavbarContext";
@@ -83,26 +83,37 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
         ${isMobile ? (isExpanded ? 'translate-x-0' : '-translate-x-full') : ''}
       `}
     >
-      <div className="flex flex-col items-center gap-4 mb-8">
+      <div className="flex justify-between items-center mb-8">
         <Avatar className={`${isExpanded ? 'h-16 w-16' : 'h-10 w-10'} transition-all duration-300`}>
           <AvatarImage src={profile?.image_url} alt={profile?.name} />
           <AvatarFallback>
             <User className={`${isExpanded ? 'h-8 w-8' : 'h-5 w-5'}`} />
           </AvatarFallback>
         </Avatar>
-        <div className={`flex flex-col items-center ${isExpanded ? 'w-full' : 'w-10'}`}>
-          {isExpanded && (
-            <>
-              <span className="font-semibold text-lg">{profile?.name}</span>
-              <Input
-                className="mt-2 w-full text-sm"
-                placeholder="Add promotion keywords..."
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
-              />
-            </>
-          )}
-        </div>
+        {isMobile && isExpanded && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleNavbar}
+            className="ml-2"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        )}
+      </div>
+
+      <div className={`flex flex-col items-center ${isExpanded ? 'w-full' : 'w-10'}`}>
+        {isExpanded && (
+          <>
+            <span className="font-semibold text-lg">{profile?.name}</span>
+            <Input
+              className="mt-2 w-full text-sm"
+              placeholder="Add promotion keywords..."
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+            />
+          </>
+        )}
       </div>
 
       {!isMobile && (
