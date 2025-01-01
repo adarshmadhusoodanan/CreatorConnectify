@@ -63,7 +63,7 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-8 left-4 z-50"
+        className="fixed top-4 left-4 z-50"
         onClick={toggleNavbar}
       >
         <Avatar className="h-10 w-10">
