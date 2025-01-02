@@ -36,7 +36,7 @@ export const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
-              CreatorConnect
+              CreatorConnectify
             </span>
           </div>
 
