@@ -136,8 +136,8 @@ const GetStarted = () => {
     <div className="min-h-screen bg-gradient-to-br from-white to-secondary/20 py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-xl overflow-hidden">
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
-            Get Started with CreatorConnect
+          <h2 className="text-2xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-[#8B5CF6] via-[#D946EF] to-[#F97316]">
+            Get Started with CreatorConnectify
           </h2>
           
           {!selectedType ? (
@@ -148,7 +148,7 @@ const GetStarted = () => {
               <div className="grid gap-4">
                 <Button
                   size="lg"
-                  className="w-full bg-primary hover:bg-primary/90"
+                  className="w-full bg-gradient-to-r from-[#8B5CF6] via-[#D946EF] to-[#F97316] hover:opacity-90 transition-opacity text-white font-semibold"
                   onClick={() => handleTypeSelect("brand")}
                 >
                   Brand
@@ -156,7 +156,7 @@ const GetStarted = () => {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="w-full border-primary text-primary hover:bg-primary/10"
+                  className="w-full border-2 border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#8B5CF6]/10"
                   onClick={() => handleTypeSelect("creator")}
                 >
                   Creator
@@ -184,10 +184,22 @@ const GetStarted = () => {
                   variables: {
                     default: {
                       colors: {
-                        brand: 'rgb(var(--primary))',
-                        brandAccent: 'rgb(var(--primary))',
+                        brand: '#8B5CF6',
+                        brandAccent: '#D946EF',
+                        brandButtonText: 'white',
+                      },
+                      borderWidths: {
+                        buttonBorder: '2px',
+                      },
+                      radii: {
+                        borderRadiusButton: '0.5rem',
                       },
                     },
+                  },
+                  className: {
+                    button: 'bg-gradient-to-r from-[#8B5CF6] via-[#D946EF] to-[#F97316] hover:opacity-90 transition-opacity',
+                    input: 'rounded-md',
+                    label: 'text-sm font-medium text-gray-700',
                   },
                 }}
                 providers={[]}
