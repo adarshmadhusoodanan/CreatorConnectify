@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -17,37 +18,71 @@ interface MessagesDialogProps {
   userType: "brand" | "creator";
 }
 
+interface Conversation {
+  otherParty: {
+    id: string;
+    name: string;
+    image_url: string | null;
+  };
+  messages: any[];
+}
+
 export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProps) {
-  const { data: messages, isLoading } = useQuery({
-    queryKey: ["messages"],
+  const { data: conversations, isLoading } = useQuery({
+    queryKey: ["conversations"],
     queryFn: async () => {
       console.log("Fetching messages");
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return [];
 
-      const { data, error } = await supabase
+      const { data: messages, error } = await supabase
         .from("messages")
         .select(`
           *,
           sender:sender_id(
-            brands ( name, image_url ),
-            creators ( name, image_url )
+            brands ( id, name, image_url ),
+            creators ( id, name, image_url )
           ),
           receiver:receiver_id(
-            brands ( name, image_url ),
-            creators ( name, image_url )
+            brands ( id, name, image_url ),
+            creators ( id, name, image_url )
           )
         `)
         .or(`sender_id.eq.${session.user.id},receiver_id.eq.${session.user.id}`)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
 
       if (error) {
         console.error("Error fetching messages:", error);
         throw error;
       }
 
-      console.log("Fetched messages:", data);
-      return data;
+      // Group messages by conversation
+      const conversationsMap = new Map<string, Conversation>();
+      
+      messages?.forEach((message) => {
+        const isUserSender = message.sender_id === session.user.id;
+        const otherParty = isUserSender ? message.receiver : message.sender;
+        const otherPartyProfile = otherParty[userType === "brand" ? "creators" : "brands"];
+        
+        if (!otherPartyProfile) return;
+        
+        const conversationId = otherPartyProfile.id;
+        
+        if (!conversationsMap.has(conversationId)) {
+          conversationsMap.set(conversationId, {
+            otherParty: {
+              id: otherPartyProfile.id,
+              name: otherPartyProfile.name,
+              image_url: otherPartyProfile.image_url,
+            },
+            messages: [],
+          });
+        }
+        
+        conversationsMap.get(conversationId)?.messages.push(message);
+      });
+
+      return Array.from(conversationsMap.values());
     },
   });
 
@@ -56,6 +91,9 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-center">Messages</DialogTitle>
+          <DialogDescription className="text-center">
+            Your conversations with {userType === "brand" ? "creators" : "brands"}
+          </DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-[400px] pr-4">
           {isLoading ? (
@@ -70,39 +108,48 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
                 </div>
               ))}
             </div>
-          ) : messages?.length === 0 ? (
+          ) : conversations?.length === 0 ? (
             <p className="text-center text-gray-500">No messages yet</p>
           ) : (
-            <div className="space-y-4">
-              {messages?.map((message) => {
-                const isSender = message.sender_id === message.receiver_id;
-                const otherParty = isSender ? message.receiver : message.sender;
-                const profile = otherParty[userType === "brand" ? "creators" : "brands"];
-
-                return (
-                  <div key={message.id} className="flex items-start space-x-4">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={profile?.image_url} />
+            <div className="space-y-6">
+              {conversations?.map((conversation) => (
+                <div key={conversation.otherParty.id} className="space-y-4">
+                  <div className="flex items-center space-x-2 pb-2 border-b">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={conversation.otherParty.image_url || undefined} />
                       <AvatarFallback>
                         {userType === "brand" ? (
-                          <UserRound className="h-5 w-5" />
+                          <UserRound className="h-4 w-4" />
                         ) : (
-                          <Building2 className="h-5 w-5" />
+                          <Building2 className="h-4 w-4" />
                         )}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold">{profile?.name}</h4>
-                        <span className="text-xs text-gray-500">
-                          {format(new Date(message.created_at), 'MMM d, h:mm a')}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1">{message.content}</p>
-                    </div>
+                    <span className="font-medium">{conversation.otherParty.name}</span>
                   </div>
-                );
-              })}
+                  <div className="space-y-2">
+                    {conversation.messages.map((message) => (
+                      <div 
+                        key={message.id} 
+                        className={`flex ${message.sender_id === message.receiver_id ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div 
+                          className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                            message.sender_id === message.receiver_id
+                              ? 'bg-primary text-white'
+                              : 'bg-gray-100'
+                          }`}
+                        >
+                          <p className="text-sm">{message.content}</p>
+                          <span className="text-xs opacity-70">
+                            {format(new Date(message.created_at), 'MMM d, h:mm a')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </ScrollArea>

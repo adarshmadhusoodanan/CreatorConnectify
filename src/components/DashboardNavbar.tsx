@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogOut, Instagram, Twitter, Youtube, Link, User, ChevronLeft, ChevronRight, X, UserCog, Globe, Contact, Inbox } from "lucide-react";
+import { LogOut, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavbar } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessagesDialog } from "./MessagesDialog";
+import { NavbarAvatar } from "./navbar/NavbarAvatar";
+import { NavbarLinks } from "./navbar/NavbarLinks";
+import { SocialLinks } from "./navbar/SocialLinks";
 
 interface DashboardNavbarProps {
   userType: "brand" | "creator";
@@ -67,12 +69,11 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
           className="fixed top-4 left-4 z-50"
           onClick={toggleNavbar}
         >
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={profile?.image_url} alt={profile?.name} />
-            <AvatarFallback>
-              <User className="h-5 w-5" />
-            </AvatarFallback>
-          </Avatar>
+          <NavbarAvatar
+            imageUrl={profile?.image_url}
+            name={profile?.name}
+            isExpanded={false}
+          />
         </Button>
         <MessagesDialog
           isOpen={isMessagesOpen}
@@ -92,12 +93,11 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
         `}
       >
         <div className="flex justify-between items-center mb-8">
-          <Avatar className={`${isExpanded ? 'h-16 w-16' : 'h-10 w-10'} transition-all duration-300`}>
-            <AvatarImage src={profile?.image_url} alt={profile?.name} />
-            <AvatarFallback>
-              <User className={`${isExpanded ? 'h-8 w-8' : 'h-5 w-5'}`} />
-            </AvatarFallback>
-          </Avatar>
+          <NavbarAvatar
+            imageUrl={profile?.image_url}
+            name={profile?.name}
+            isExpanded={isExpanded}
+          />
           {isMobile && isExpanded && (
             <Button
               variant="ghost"
@@ -127,77 +127,17 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
           </Button>
         )}
 
-        {isExpanded && (
-          <div className="flex flex-col gap-2 mt-4">
-            <Button variant="ghost" className="justify-start">
-              <UserCog className="h-5 w-5 mr-2" />
-              Edit Profile
-            </Button>
-            <Button variant="ghost" className="justify-start">
-              <Globe className="h-5 w-5 mr-2" />
-              Website
-            </Button>
-            <Button variant="ghost" className="justify-start">
-              <Contact className="h-5 w-5 mr-2" />
-              Contacts
-            </Button>
-            <Button 
-              variant="ghost" 
-              className="justify-start"
-              onClick={() => setIsMessagesOpen(true)}
-            >
-              <Inbox className="h-5 w-5 mr-2" />
-              Messages
-            </Button>
-          </div>
-        )}
+        <NavbarLinks
+          isExpanded={isExpanded}
+          onMessagesClick={() => setIsMessagesOpen(true)}
+        />
 
         <div className="flex flex-col gap-4 mt-auto">
-          {userType === "creator" && isExpanded ? (
-            <div className="flex justify-center gap-4">
-              {profile?.instagram_link && (
-                <a
-                  href={profile.instagram_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-pink-600 hover:text-pink-700"
-                >
-                  <Instagram className="h-5 w-5" />
-                </a>
-              )}
-              {profile?.twitter_link && (
-                <a
-                  href={profile.twitter_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:text-blue-500"
-                >
-                  <Twitter className="h-5 w-5" />
-                </a>
-              )}
-              {profile?.youtube_link && (
-                <a
-                  href={profile.youtube_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Youtube className="h-5 w-5" />
-                </a>
-              )}
-            </div>
-          ) : null}
-          {isExpanded && userType === "brand" && profile?.website_url && (
-            <a
-              href={profile.website_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1 text-primary hover:text-primary/90"
-            >
-              <Link className="h-5 w-5" />
-              Website
-            </a>
-          )}
+          <SocialLinks
+            isExpanded={isExpanded}
+            userType={userType}
+            profile={profile}
+          />
           <Button
             variant="ghost"
             onClick={handleLogout}
