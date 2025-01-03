@@ -6,11 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { DashboardNavbar } from "@/components/DashboardNavbar";
 import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { BrandDialog } from "@/components/BrandDialog";
 
 const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { isExpanded } = useNavbar();
   const isMobile = useIsMobile();
+  const [selectedBrand, setSelectedBrand] = useState(null);
 
   const { data: brands, isLoading } = useQuery({
     queryKey: ["brands", searchQuery],
@@ -67,7 +69,8 @@ const DashboardContent = () => {
             {brands?.map((brand) => (
               <div
                 key={brand.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => setSelectedBrand(brand)}
               >
                 <div className="aspect-w-16 aspect-h-9">
                   <img
@@ -86,6 +89,12 @@ const DashboardContent = () => {
             ))}
           </div>
         )}
+
+        <BrandDialog
+          brand={selectedBrand}
+          isOpen={!!selectedBrand}
+          onClose={() => setSelectedBrand(null)}
+        />
       </div>
     </div>
   );
