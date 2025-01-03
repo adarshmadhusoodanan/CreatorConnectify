@@ -6,11 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { DashboardNavbar } from "@/components/DashboardNavbar";
 import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { CreatorDialog } from "@/components/CreatorDialog";
 
 const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { isExpanded } = useNavbar();
   const isMobile = useIsMobile();
+  const [selectedCreator, setSelectedCreator] = useState(null);
 
   const { data: creators, isLoading } = useQuery({
     queryKey: ["creators", searchQuery],
@@ -67,7 +69,8 @@ const DashboardContent = () => {
             {creators?.map((creator) => (
               <div
                 key={creator.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden"
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => setSelectedCreator(creator)}
               >
                 <div className="aspect-w-16 aspect-h-9">
                   <img
@@ -86,6 +89,12 @@ const DashboardContent = () => {
             ))}
           </div>
         )}
+
+        <CreatorDialog
+          creator={selectedCreator}
+          isOpen={!!selectedCreator}
+          onClose={() => setSelectedCreator(null)}
+        />
       </div>
     </div>
   );
