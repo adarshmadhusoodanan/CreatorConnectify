@@ -35,17 +35,18 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return [];
 
+      // First, get all messages for the current user
       const { data: messages, error } = await supabase
         .from("messages")
         .select(`
           *,
-          sender:sender_id(
-            brands ( id, name, image_url ),
-            creators ( id, name, image_url )
+          sender_profile:sender_id(
+            brands:brands(id, name, image_url),
+            creators:creators(id, name, image_url)
           ),
-          receiver:receiver_id(
-            brands ( id, name, image_url ),
-            creators ( id, name, image_url )
+          receiver_profile:receiver_id(
+            brands:brands(id, name, image_url),
+            creators:creators(id, name, image_url)
           )
         `)
         .or(`sender_id.eq.${session.user.id},receiver_id.eq.${session.user.id}`)
@@ -61,19 +62,21 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
       
       messages?.forEach((message) => {
         const isUserSender = message.sender_id === session.user.id;
-        const otherParty = isUserSender ? message.receiver : message.sender;
-        const otherPartyProfile = otherParty[userType === "brand" ? "creators" : "brands"];
+        const otherPartyProfile = isUserSender 
+          ? message.receiver_profile 
+          : message.sender_profile;
         
-        if (!otherPartyProfile) return;
+        const profile = otherPartyProfile[userType === "brand" ? "creators" : "brands"];
+        if (!profile) return;
         
-        const conversationId = otherPartyProfile.id;
+        const conversationId = profile.id;
         
         if (!conversationsMap.has(conversationId)) {
           conversationsMap.set(conversationId, {
             otherParty: {
-              id: otherPartyProfile.id,
-              name: otherPartyProfile.name,
-              image_url: otherPartyProfile.image_url,
+              id: profile.id,
+              name: profile.name,
+              image_url: profile.image_url,
             },
             messages: [],
           });
