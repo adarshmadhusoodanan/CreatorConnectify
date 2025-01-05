@@ -1,84 +1,138 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+interface Message {
+  id: string;
+  content: string;
+  sender_id: string;
+  receiver_id: string;
+  created_at: string;
+}
+
+interface Conversation {
+  otherParty?: {
+    id: string;
+    name: string;
+    image_url?: string;
+  };
+  messages: Message[];
+  lastMessage?: Message;
+}
 
 export function useMessages(currentUserId: string | null) {
-  const queryClient = useQueryClient();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!currentUserId) return;
 
+    const fetchMessages = async () => {
+      console.log("Fetching messages");
+      try {
+        // Get all messages where the current user is either sender or receiver
+        const { data: messages, error: messagesError } = await supabase
+          .from("messages")
+          .select("*")
+          .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
+          .order("created_at", { ascending: false });
+
+        if (messagesError) {
+          console.error("Error fetching messages:", messagesError);
+          throw messagesError;
+        }
+
+        // Get unique user IDs from messages (excluding current user)
+        const uniqueUserIds = Array.from(
+          new Set(
+            messages?.flatMap((message) => [message.sender_id, message.receiver_id])
+          )
+        ).filter((id) => id !== currentUserId);
+
+        // Initialize conversations map
+        const conversationsMap = new Map<string, Conversation>();
+
+        // For each unique user, get their profile and create a conversation
+        for (const userId of uniqueUserIds) {
+          try {
+            // Try to get brand profile
+            const { data: brand } = await supabase
+              .from("brands")
+              .select("*")
+              .eq("user_id", userId)
+              .maybeSingle();
+
+            // Try to get creator profile
+            const { data: creator } = await supabase
+              .from("creators")
+              .select("*")
+              .eq("user_id", userId)
+              .maybeSingle();
+
+            const profile = brand || creator;
+            if (!profile) {
+              console.log(`No profile found for user ${userId}`);
+              continue;
+            }
+
+            // Get messages for this conversation
+            const conversationMessages = messages
+              ?.filter(
+                (message) =>
+                  (message.sender_id === userId || message.receiver_id === userId)
+              )
+              .sort((a, b) => 
+                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              );
+
+            conversationsMap.set(profile.id, {
+              otherParty: {
+                id: profile.id,
+                name: profile.name,
+                image_url: profile.image_url,
+              },
+              messages: conversationMessages || [],
+              lastMessage: conversationMessages?.[conversationMessages.length - 1],
+            });
+          } catch (error) {
+            console.error(`Error processing user ${userId}:`, error);
+          }
+        }
+
+        setConversations(Array.from(conversationsMap.values()));
+      } catch (error) {
+        console.error("Error in fetchMessages:", error);
+        toast.error("Failed to load messages");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Set up real-time subscription for messages
     console.log("Setting up real-time subscription for messages");
-    const channel = supabase
-      .channel('messages_changes')
+    const subscription = supabase
+      .channel("messages")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `sender_id=eq.${currentUserId}`,
+          event: "*",
+          schema: "public",
+          table: "messages",
+          filter: `sender_id=eq.${currentUserId},receiver_id=eq.${currentUserId}`,
         },
-        (payload) => {
-          console.log("New message received:", payload);
-          queryClient.invalidateQueries({ queryKey: ["conversations", currentUserId] });
+        () => {
+          fetchMessages();
         }
       )
       .subscribe();
 
+    fetchMessages();
+
     return () => {
       console.log("Cleaning up real-time subscription");
-      supabase.removeChannel(channel);
+      subscription.unsubscribe();
     };
-  }, [currentUserId, queryClient]);
-
-  const { data: conversations, isLoading } = useQuery({
-    queryKey: ["conversations", currentUserId],
-    queryFn: async () => {
-      console.log("Fetching messages");
-      if (!currentUserId) return [];
-
-      const { data: messages, error } = await supabase
-        .from("messages")
-        .select("*")
-        .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching messages:", error);
-        throw error;
-      }
-
-      const conversationsMap = new Map();
-
-      for (const message of messages || []) {
-        const otherUserId = message.sender_id === currentUserId 
-          ? message.receiver_id 
-          : message.sender_id;
-
-        if (!conversationsMap.has(otherUserId)) {
-          conversationsMap.set(otherUserId, {
-            messages: [],
-            lastMessage: null,
-          });
-        }
-
-        conversationsMap.get(otherUserId).messages.push(message);
-        
-        const conversation = conversationsMap.get(otherUserId);
-        if (!conversation.lastMessage || new Date(message.created_at) > new Date(conversation.lastMessage.created_at)) {
-          conversation.lastMessage = message;
-        }
-      }
-
-      return Array.from(conversationsMap.values())
-        .sort((a, b) => {
-          if (!a.lastMessage) return 1;
-          if (!b.lastMessage) return -1;
-          return new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime();
-        });
-    },
-  });
+  }, [currentUserId]);
 
   return { conversations, isLoading };
 }
