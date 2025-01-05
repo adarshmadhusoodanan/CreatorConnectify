@@ -25,26 +25,49 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.log("No session found");
+          return;
+        }
 
-      const { data, error } = await supabase
-        .from(userType === "brand" ? "brands" : "creators")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .single();
+        console.log(`Fetching ${userType} profile for user:`, session.user.id);
+        const { data, error } = await supabase
+          .from(userType === "brand" ? "brands" : "creators")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching profile:", error);
-        return;
+        if (error) {
+          console.error(`Error fetching ${userType} profile:`, error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: `Failed to load ${userType} profile`,
+          });
+          return;
+        }
+
+        if (!data) {
+          console.log(`No ${userType} profile found`);
+          toast({
+            variant: "destructive",
+            title: "Profile Not Found",
+            description: `No ${userType} profile exists for this user`,
+          });
+          return;
+        }
+
+        console.log(`Fetched ${userType} profile:`, data);
+        setProfile(data);
+      } catch (error) {
+        console.error("Error in fetchProfile:", error);
       }
-
-      console.log(`Fetched ${userType} profile:`, data);
-      setProfile(data);
     };
 
     fetchProfile();
-  }, [userType]);
+  }, [userType, toast]);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -111,8 +134,8 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
         </div>
 
         <div className={`flex flex-col items-center ${isExpanded ? 'w-full' : 'w-10'}`}>
-          {isExpanded && (
-            <span className="font-semibold text-lg mb-4">{profile?.name}</span>
+          {isExpanded && profile?.name && (
+            <span className="font-semibold text-lg mb-4">{profile.name}</span>
           )}
         </div>
 
