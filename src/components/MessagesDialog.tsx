@@ -7,11 +7,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building2, UserRound } from "lucide-react";
+import { Building2, UserRound, Send } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 interface MessagesDialogProps {
   isOpen: boolean;
@@ -30,6 +33,9 @@ interface Conversation {
 
 export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProps) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [newMessage, setNewMessage] = useState("");
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     const getSession = async () => {
@@ -107,6 +113,58 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
     },
   });
 
+  const handleSendMessage = async (conversationId: string) => {
+    if (!newMessage.trim() || !currentUserId) {
+      toast.error("Please enter a message");
+      return;
+    }
+
+    setIsSending(true);
+    
+    try {
+      // Get the user_id of the recipient from the conversation
+      const conversation = conversations?.find(c => c.otherParty.id === conversationId);
+      if (!conversation) {
+        toast.error("Conversation not found");
+        return;
+      }
+
+      const { data: recipientData, error: recipientError } = await supabase
+        .from(userType === "brand" ? "creators" : "brands")
+        .select("user_id")
+        .eq("id", conversationId)
+        .single();
+
+      if (recipientError || !recipientData) {
+        console.error("Error fetching recipient:", recipientError);
+        toast.error("Failed to send message");
+        return;
+      }
+
+      const { error: messageError } = await supabase
+        .from("messages")
+        .insert({
+          sender_id: currentUserId,
+          receiver_id: recipientData.user_id,
+          content: newMessage,
+        });
+
+      if (messageError) {
+        console.error("Error sending message:", messageError);
+        toast.error("Failed to send message");
+        return;
+      }
+
+      toast.success("Message sent!");
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -135,7 +193,10 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
             <div className="space-y-6">
               {conversations?.map((conversation) => (
                 <div key={conversation.otherParty.id} className="space-y-4">
-                  <div className="flex items-center space-x-2 pb-2 border-b">
+                  <div 
+                    className="flex items-center space-x-2 pb-2 border-b cursor-pointer"
+                    onClick={() => setSelectedConversation(conversation.otherParty.id)}
+                  >
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={conversation.otherParty.image_url || undefined} />
                       <AvatarFallback>
@@ -173,6 +234,24 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
                       );
                     })}
                   </div>
+                  {selectedConversation === conversation.otherParty.id && (
+                    <div className="flex gap-2 mt-2">
+                      <Textarea
+                        placeholder="Type your message..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        className="min-h-[60px] resize-none"
+                      />
+                      <Button
+                        size="icon"
+                        onClick={() => handleSendMessage(conversation.otherParty.id)}
+                        disabled={isSending || !newMessage.trim()}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
