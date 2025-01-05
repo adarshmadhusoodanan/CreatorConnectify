@@ -1,5 +1,3 @@
-import { format } from "date-fns";
-
 interface MessageListProps {
   messages: any[];
   currentUserId: string | null;
@@ -7,29 +5,25 @@ interface MessageListProps {
 
 export function MessageList({ messages, currentUserId }: MessageListProps) {
   return (
-    <div className="space-y-2">
-      {messages.map((message) => {
-        const isSender = message.sender_id === currentUserId;
-        return (
+    <div className="space-y-4 p-4">
+      {messages.map((message) => (
+        <div
+          key={message.id}
+          className={`flex ${
+            message.sender_id === currentUserId ? "justify-end" : "justify-start"
+          }`}
+        >
           <div
-            key={message.id}
-            className={`flex ${isSender ? 'justify-end' : 'justify-start'}`}
+            className={`max-w-[70%] rounded-lg px-4 py-2 ${
+              message.sender_id === currentUserId
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted"
+            }`}
           >
-            <div
-              className={`rounded-lg px-4 py-2 max-w-[80%] break-words
-                ${isSender 
-                  ? 'ml-auto bg-primary text-primary-foreground' 
-                  : 'mr-auto bg-muted'
-                }`}
-            >
-              <p className="text-sm">{message.content}</p>
-              <p className="text-xs opacity-70 mt-1">
-                {format(new Date(message.created_at), 'MMM d, h:mm a')}
-              </p>
-            </div>
+            <p className="text-sm">{message.content}</p>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { ConversationList } from "./messages/ConversationList";
 import { MessageList } from "./messages/MessageList";
 import { MessageInput } from "./messages/MessageInput";
+import { Separator } from "./ui/separator";
 
 interface MessagesDialogProps {
   isOpen: boolean;
@@ -78,13 +79,26 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
           conversationsMap.set(otherUserId, {
             otherParty,
             messages: [],
+            lastMessage: null,
           });
         }
 
         conversationsMap.get(otherUserId).messages.push(message);
+        
+        // Update last message
+        const conversation = conversationsMap.get(otherUserId);
+        if (!conversation.lastMessage || new Date(message.created_at) > new Date(conversation.lastMessage.created_at)) {
+          conversation.lastMessage = message;
+        }
       }
 
-      return Array.from(conversationsMap.values());
+      // Convert to array and sort by last message date
+      return Array.from(conversationsMap.values())
+        .sort((a, b) => {
+          if (!a.lastMessage) return 1;
+          if (!b.lastMessage) return -1;
+          return new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime();
+        });
     },
   });
 
@@ -141,48 +155,69 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Messages</DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="h-[60vh]">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <p>Loading conversations...</p>
-            </div>
-          ) : conversations?.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <p>No messages yet</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {conversations?.map((conversation) => (
-                <div key={conversation.otherParty.id} className="space-y-4">
-                  <ConversationList
-                    conversations={conversations}
-                    selectedConversation={selectedConversation}
-                    setSelectedConversation={setSelectedConversation}
-                    userType={userType}
-                  />
-                  {selectedConversation === conversation.otherParty.id && (
-                    <>
+      <DialogContent className="sm:max-w-[800px] p-0">
+        <div className="flex h-[600px]">
+          {/* Conversations List */}
+          <div className="w-1/3 border-r">
+            <DialogHeader className="p-4 border-b">
+              <DialogTitle>Messages</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="h-[calc(600px-65px)]">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <p>Loading conversations...</p>
+                </div>
+              ) : conversations?.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <p>No messages yet</p>
+                </div>
+              ) : (
+                <ConversationList
+                  conversations={conversations}
+                  selectedConversation={selectedConversation}
+                  setSelectedConversation={setSelectedConversation}
+                  userType={userType}
+                />
+              )}
+            </ScrollArea>
+          </div>
+
+          {/* Chat Area */}
+          <div className="w-2/3 flex flex-col">
+            {selectedConversation ? (
+              <>
+                <DialogHeader className="p-4 border-b">
+                  <DialogTitle>
+                    {conversations?.find(c => c.otherParty.id === selectedConversation)?.otherParty.name}
+                  </DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="flex-1">
+                  {conversations?.map((conversation) =>
+                    selectedConversation === conversation.otherParty.id && (
                       <MessageList
+                        key={conversation.otherParty.id}
                         messages={conversation.messages}
                         currentUserId={currentUserId}
                       />
-                      <MessageInput
-                        newMessage={newMessage}
-                        setNewMessage={setNewMessage}
-                        handleSendMessage={handleSendMessage}
-                        isSending={isSending}
-                      />
-                    </>
+                    )
                   )}
+                </ScrollArea>
+                <div className="p-4 border-t mt-auto">
+                  <MessageInput
+                    newMessage={newMessage}
+                    setNewMessage={setNewMessage}
+                    handleSendMessage={handleSendMessage}
+                    isSending={isSending}
+                  />
                 </div>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                Select a conversation to start chatting
+              </div>
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

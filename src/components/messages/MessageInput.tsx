@@ -1,5 +1,5 @@
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Send } from "lucide-react";
 
 interface MessageInputProps {
@@ -15,19 +15,26 @@ export function MessageInput({
   handleSendMessage,
   isSending,
 }: MessageInputProps) {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   return (
-    <div className="flex gap-2 mt-2">
-      <Textarea
-        placeholder="Type your message..."
+    <div className="flex items-center space-x-2">
+      <Input
+        placeholder="Type a message..."
         value={newMessage}
         onChange={(e) => setNewMessage(e.target.value)}
-        className="min-h-[60px] resize-none"
+        onKeyPress={handleKeyPress}
+        disabled={isSending}
       />
       <Button
         size="icon"
         onClick={handleSendMessage}
-        disabled={isSending || !newMessage.trim()}
-        className="bg-primary hover:bg-primary/90"
+        disabled={isSending}
       >
         <Send className="h-4 w-4" />
       </Button>
