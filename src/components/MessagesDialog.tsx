@@ -12,6 +12,7 @@ import { MessageList } from "./messages/MessageList";
 import { MessageInput } from "./messages/MessageInput";
 import { useMessages } from "./messages/useMessages";
 import { useSession } from "./messages/useSession";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MessagesDialogProps {
   isOpen: boolean;
@@ -90,13 +91,9 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
                 <div className="flex items-center justify-center h-full">
                   <p>Loading conversations...</p>
                 </div>
-              ) : conversations?.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <p>No messages yet</p>
-                </div>
               ) : (
                 <ConversationList
-                  conversations={conversations}
+                  conversations={conversations || []}
                   selectedConversation={selectedConversation}
                   setSelectedConversation={setSelectedConversation}
                   userType={userType}
