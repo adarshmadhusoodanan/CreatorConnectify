@@ -11,6 +11,7 @@ import { Building2, UserRound } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { useEffect, useState } from "react";
 
 interface MessagesDialogProps {
   isOpen: boolean;
@@ -28,6 +29,16 @@ interface Conversation {
 }
 
 export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProps) {
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setCurrentUserId(session?.user?.id || null);
+    };
+    getSession();
+  }, []);
+
   const { data: conversations, isLoading } = useQuery({
     queryKey: ["conversations"],
     queryFn: async () => {
@@ -139,8 +150,7 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
                   </div>
                   <div className="space-y-2">
                     {conversation.messages.map((message) => {
-                      const { data: { session } } = await supabase.auth.getSession();
-                      const isSender = message.sender_id === session?.user?.id;
+                      const isSender = message.sender_id === currentUserId;
                       
                       return (
                         <div 
