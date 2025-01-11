@@ -92,9 +92,13 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
         return;
       }
 
+      // Get the session URL synchronously
+      const { data: { url } } = await supabase.auth.getSession();
+      const hostname = new URL(url || window.location.origin).hostname.split('.')[0];
+      const key = `sb-${hostname}-auth-token`;
+
       // Clear any stored session data
       console.log("Clearing stored session data...");
-      const key = 'sb-' + new URL(supabase.auth.getSession().then(() => '')).hostname.split('.')[0] + '-auth-token';
       localStorage.removeItem(key);
       sessionStorage.removeItem(key);
 
