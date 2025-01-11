@@ -26,25 +26,14 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     params: {
       eventsPerSecond: 10
     }
+  },
+  // Add debug logging through the client options
+  debug: {
+    logLevel: 'debug'
   }
 });
 
-// Add a debug interceptor to log requests
-supabase.rest.interceptors.response.use(
-  (response) => {
-    console.log('Supabase API Response:', {
-      url: response.url,
-      status: response.status,
-      statusText: response.statusText
-    });
-    return response;
-  },
-  (error) => {
-    console.error('Supabase API Error:', {
-      url: error.request?.url,
-      message: error.message,
-      status: error.status
-    });
-    return Promise.reject(error);
-  }
-);
+// Add simple request logging
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('Auth state changed:', { event, session });
+});
