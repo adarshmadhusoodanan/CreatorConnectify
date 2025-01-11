@@ -4,15 +4,65 @@ import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardNavbar } from "@/components/DashboardNavbar";
-import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
+import { NavbarProvider } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CreatorDialog } from "@/components/CreatorDialog";
+import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { isExpanded } = useNavbar();
   const isMobile = useIsMobile();
   const [selectedCreator, setSelectedCreator] = useState(null);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Check if user has a brand profile
+  useEffect(() => {
+    const checkBrandProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log("No session found, redirecting to login");
+        navigate("/login");
+        return;
+      }
+
+      console.log("Checking brand profile for user:", session.user.id);
+      const { data: brand, error } = await supabase
+        .from("brands")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching brand profile:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load brand profile",
+        });
+        return;
+      }
+
+      if (!brand) {
+        console.log("No brand profile found, redirecting to get started");
+        toast({
+          variant: "destructive",
+          title: "No Brand Profile",
+          description: "Please complete your brand profile setup",
+        });
+        navigate("/get-started");
+        return;
+      }
+
+      console.log("Brand profile found:", brand);
+    };
+
+    checkBrandProfile();
+  }, [navigate, toast]);
 
   const { data: creators, isLoading } = useQuery({
     queryKey: ["creators", searchQuery],
