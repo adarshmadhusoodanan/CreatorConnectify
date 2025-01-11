@@ -82,7 +82,6 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
       
       if (sessionError) {
         console.error("Error checking session:", sessionError);
-        // If we can't get the session, just navigate away
         navigate("/");
         return;
       }
@@ -95,8 +94,9 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
 
       // Clear any stored session data
       console.log("Clearing stored session data...");
-      localStorage.removeItem('sb-' + supabase.supabaseUrl + '-auth-token');
-      sessionStorage.removeItem('sb-' + supabase.supabaseUrl + '-auth-token');
+      const key = 'sb-' + new URL(supabase.auth.getSession().then(() => '')).hostname.split('.')[0] + '-auth-token';
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
 
       // Attempt to sign out
       console.log("Attempting to sign out...");
@@ -104,7 +104,6 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
 
       if (signOutError) {
         console.error("Error during sign out:", signOutError);
-        // Even if sign out fails, we'll navigate away
         navigate("/");
         return;
       }
@@ -114,7 +113,6 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
       
     } catch (error) {
       console.error("Error in handleLogout:", error);
-      // Ensure we navigate away even if there's an error
       navigate("/");
     } finally {
       setIsLoggingOut(false);
@@ -218,3 +216,5 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
     </>
   );
 };
+
+export default DashboardNavbar;
