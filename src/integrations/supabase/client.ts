@@ -19,6 +19,12 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
   db: {
     schema: 'public',
   },
+  // Add retries for failed requests
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
 });
 
 // Add request logging
