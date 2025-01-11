@@ -4,7 +4,7 @@ export interface Message {
   sender_id: string;
   receiver_id: string;
   created_at: string;
-  read?: boolean | null;
+  read?: boolean;
 }
 
 export interface Conversation {

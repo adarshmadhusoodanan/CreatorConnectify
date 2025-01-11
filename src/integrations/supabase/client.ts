@@ -6,27 +6,16 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    persistSession: true,
     autoRefreshToken: true,
+    persistSession: true,
     detectSessionInUrl: true,
-    flowType: 'pkce',
     storage: window.localStorage,
-    storageKey: 'supabase.auth.token',
   },
   global: {
     headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      'X-Client-Info': 'supabase-js-web',
     },
   },
-  db: {
-    schema: 'public'
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  }
 });
 
 // Add simple request logging
