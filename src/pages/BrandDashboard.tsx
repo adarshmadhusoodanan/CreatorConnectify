@@ -19,11 +19,9 @@ const DashboardContent = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Check if user has a brand profile
   useEffect(() => {
     const checkBrandProfile = async () => {
       try {
-        console.log("Checking brand profile...");
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
@@ -77,22 +75,32 @@ const DashboardContent = () => {
   const { data: creators, isLoading } = useQuery({
     queryKey: ["creators", searchQuery],
     queryFn: async () => {
-      console.log("Fetching creators with search query:", searchQuery);
-      let query = supabase.from("creators").select("*");
-      
-      if (searchQuery) {
-        query = query.ilike("name", `%${searchQuery}%`);
-      }
-      
-      const { data, error } = await query.limit(10);
-      
-      if (error) {
+      try {
+        console.log("Fetching creators with search query:", searchQuery);
+        let query = supabase.from("creators").select("*");
+        
+        if (searchQuery) {
+          query = query.ilike("name", `%${searchQuery}%`);
+        }
+        
+        const { data, error } = await query.limit(10);
+        
+        if (error) {
+          console.error("Error fetching creators:", error);
+          throw error;
+        }
+        
+        console.log("Fetched creators:", data);
+        return data;
+      } catch (error: any) {
         console.error("Error fetching creators:", error);
-        throw error;
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load creators",
+        });
+        return [];
       }
-      
-      console.log("Fetched creators:", data);
-      return data;
     },
   });
 

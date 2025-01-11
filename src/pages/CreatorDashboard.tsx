@@ -22,7 +22,6 @@ const DashboardContent = () => {
   useEffect(() => {
     const checkCreatorProfile = async () => {
       try {
-        console.log("Checking creator profile...");
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
@@ -31,7 +30,7 @@ const DashboardContent = () => {
           return;
         }
 
-        console.log("Checking creator profile for user:", session.user.id);
+        console.log("Fetching creator profile for user:", session.user.id);
         const { data: creator, error } = await supabase
           .from("creators")
           .select("*")
@@ -76,22 +75,32 @@ const DashboardContent = () => {
   const { data: brands, isLoading } = useQuery({
     queryKey: ["brands", searchQuery],
     queryFn: async () => {
-      console.log("Fetching brands with search query:", searchQuery);
-      let query = supabase.from("brands").select("*");
-      
-      if (searchQuery) {
-        query = query.ilike("name", `%${searchQuery}%`);
-      }
-      
-      const { data, error } = await query.limit(10);
-      
-      if (error) {
+      try {
+        console.log("Fetching brands with search query:", searchQuery);
+        let query = supabase.from("brands").select("*");
+        
+        if (searchQuery) {
+          query = query.ilike("name", `%${searchQuery}%`);
+        }
+        
+        const { data, error } = await query.limit(10);
+        
+        if (error) {
+          console.error("Error fetching brands:", error);
+          throw error;
+        }
+        
+        console.log("Fetched brands:", data);
+        return data;
+      } catch (error: any) {
         console.error("Error fetching brands:", error);
-        throw error;
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load brands",
+        });
+        return [];
       }
-      
-      console.log("Fetched brands:", data);
-      return data;
     },
   });
 
