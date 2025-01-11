@@ -10,7 +10,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     autoRefreshToken: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
-    storage: localStorage,
+    storage: window.localStorage,
     storageKey: 'supabase.auth.token',
   },
   global: {
@@ -28,3 +28,23 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     }
   }
 });
+
+// Add a debug interceptor to log requests
+supabase.rest.interceptors.response.use(
+  (response) => {
+    console.log('Supabase API Response:', {
+      url: response.url,
+      status: response.status,
+      statusText: response.statusText
+    });
+    return response;
+  },
+  (error) => {
+    console.error('Supabase API Error:', {
+      url: error.request?.url,
+      message: error.message,
+      status: error.status
+    });
+    return Promise.reject(error);
+  }
+);
