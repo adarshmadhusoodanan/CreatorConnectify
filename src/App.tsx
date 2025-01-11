@@ -11,7 +11,14 @@ import GetStarted from "./pages/GetStarted";
 import BrandDashboard from "./pages/BrandDashboard";
 import CreatorDashboard from "./pages/CreatorDashboard";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<any>(null);
@@ -19,11 +26,24 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const checkSession = async () => {
-      console.log("Checking session...");
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      console.log("Current session:", currentSession);
-      setSession(currentSession);
-      setLoading(false);
+      try {
+        console.log("Checking session...");
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Session error:", error);
+          setSession(null);
+        } else {
+          console.log("Current session:", currentSession);
+          setSession(currentSession);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error("Error checking session:", error);
+        setSession(null);
+        setLoading(false);
+      }
     };
 
     checkSession();
@@ -53,42 +73,62 @@ const App = () => {
 
   useEffect(() => {
     const checkUserType = async () => {
-      console.log("Checking user type...");
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        // Check if user has a brand profile
-        const { data: brand } = await supabase
-          .from("brands")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        if (brand) {
-          console.log("User is a brand");
-          setUserType("brand");
+      try {
+        console.log("Checking user type...");
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
           setInitializing(false);
           return;
         }
+        
+        if (session) {
+          // Check if user has a brand profile
+          const { data: brand, error: brandError } = await supabase
+            .from("brands")
+            .select("id")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
 
-        // Check if user has a creator profile
-        const { data: creator } = await supabase
-          .from("creators")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+          if (brandError) {
+            console.error("Error checking brand profile:", brandError);
+          }
 
-        if (creator) {
-          console.log("User is a creator");
-          setUserType("creator");
-          setInitializing(false);
-          return;
+          if (brand) {
+            console.log("User is a brand");
+            setUserType("brand");
+            setInitializing(false);
+            return;
+          }
+
+          // Check if user has a creator profile
+          const { data: creator, error: creatorError } = await supabase
+            .from("creators")
+            .select("id")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+
+          if (creatorError) {
+            console.error("Error checking creator profile:", creatorError);
+          }
+
+          if (creator) {
+            console.log("User is a creator");
+            setUserType("creator");
+            setInitializing(false);
+            return;
+          }
         }
+
+        console.log("User type not found or not logged in");
+        setUserType(null);
+        setInitializing(false);
+      } catch (error) {
+        console.error("Error in checkUserType:", error);
+        setUserType(null);
+        setInitializing(false);
       }
-
-      console.log("User type not found or not logged in");
-      setUserType(null);
-      setInitializing(false);
     };
 
     checkUserType();
