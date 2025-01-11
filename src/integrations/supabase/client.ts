@@ -26,7 +26,18 @@ supabase.auth.onAuthStateChange((event, session) => {
   console.log('Auth state changed:', { event, session });
 });
 
-// Add error handling through event listeners instead of handleError
-supabase.auth.onError((error) => {
-  console.error('Supabase auth error:', error);
+// Add error handling through event listeners
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'TOKEN_REFRESHED') {
+    console.log('Token refreshed successfully');
+  }
+  if (event === 'SIGNED_OUT') {
+    console.log('User signed out');
+  }
+  if (event === 'USER_DELETED') {
+    console.error('User was deleted');
+  }
+  if (event === 'USER_UPDATED') {
+    console.log('User was updated');
+  }
 });
