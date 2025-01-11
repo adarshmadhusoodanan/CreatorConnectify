@@ -22,44 +22,53 @@ const DashboardContent = () => {
   // Check if user has a brand profile
   useEffect(() => {
     const checkBrandProfile = async () => {
-      console.log("Checking brand profile...");
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        console.log("No session found, redirecting to login");
-        navigate("/login");
-        return;
-      }
+      try {
+        console.log("Checking brand profile...");
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          console.log("No session found, redirecting to login");
+          navigate("/login");
+          return;
+        }
 
-      console.log("Checking brand profile for user:", session.user.id);
-      const { data: brand, error } = await supabase
-        .from("brands")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+        console.log("Checking brand profile for user:", session.user.id);
+        const { data: brand, error } = await supabase
+          .from("brands")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching brand profile:", error);
+        if (error) {
+          console.error("Error fetching brand profile:", error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to load brand profile",
+          });
+          return;
+        }
+
+        if (!brand) {
+          console.log("No brand profile found, redirecting to get started");
+          toast({
+            variant: "destructive",
+            title: "No Brand Profile",
+            description: "Please complete your brand profile setup",
+          });
+          navigate("/get-started");
+          return;
+        }
+
+        console.log("Brand profile found:", brand);
+      } catch (error: any) {
+        console.error("Error in checkBrandProfile:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to load brand profile",
+          description: error.message || "An unexpected error occurred",
         });
-        return;
       }
-
-      if (!brand) {
-        console.log("No brand profile found, redirecting to get started");
-        toast({
-          variant: "destructive",
-          title: "No Brand Profile",
-          description: "Please complete your brand profile setup",
-        });
-        navigate("/get-started");
-        return;
-      }
-
-      console.log("Brand profile found:", brand);
     };
 
     checkBrandProfile();

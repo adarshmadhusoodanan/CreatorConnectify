@@ -8,7 +8,7 @@ import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrandDialog } from "@/components/BrandDialog";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
 const DashboardContent = () => {
@@ -19,41 +19,55 @@ const DashboardContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check if user has a creator profile
   useEffect(() => {
     const checkCreatorProfile = async () => {
-      console.log("Checking creator profile...");
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        console.log("No session found");
-        navigate("/login");
-        return;
-      }
+      try {
+        console.log("Checking creator profile...");
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          console.log("No session found, redirecting to login");
+          navigate("/login");
+          return;
+        }
 
-      const { data: creator, error } = await supabase
-        .from("creators")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+        console.log("Checking creator profile for user:", session.user.id);
+        const { data: creator, error } = await supabase
+          .from("creators")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching creator profile:", error);
+        if (error) {
+          console.error("Error fetching creator profile:", error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to load creator profile",
+          });
+          return;
+        }
+
+        if (!creator) {
+          console.log("No creator profile found, redirecting to get started");
+          toast({
+            variant: "destructive",
+            title: "No Creator Profile",
+            description: "Please complete your creator profile setup",
+          });
+          navigate("/get-started");
+          return;
+        }
+
+        console.log("Creator profile found:", creator);
+      } catch (error: any) {
+        console.error("Error in checkCreatorProfile:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to load creator profile",
+          description: error.message || "An unexpected error occurred",
         });
-        return;
       }
-
-      if (!creator) {
-        console.log("No creator profile found, redirecting to get started");
-        navigate("/get-started");
-        return;
-      }
-
-      console.log("Creator profile found:", creator);
     };
 
     checkCreatorProfile();
