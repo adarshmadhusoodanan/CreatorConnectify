@@ -7,7 +7,7 @@ import { DashboardNavbar } from "@/components/DashboardNavbar";
 import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CreatorDialog } from "@/components/CreatorDialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
@@ -22,6 +22,7 @@ const DashboardContent = () => {
   // Check if user has a brand profile
   useEffect(() => {
     const checkBrandProfile = async () => {
+      console.log("Checking brand profile...");
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
