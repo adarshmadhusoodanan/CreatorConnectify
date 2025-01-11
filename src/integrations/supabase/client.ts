@@ -26,10 +26,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     params: {
       eventsPerSecond: 10
     }
-  },
-  // Add debug logging through the client options
-  debug: {
-    logLevel: 'debug'
   }
 });
 
