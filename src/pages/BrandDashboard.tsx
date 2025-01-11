@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardNavbar } from "@/components/DashboardNavbar";
-import { NavbarProvider } from "@/contexts/NavbarContext";
+import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CreatorDialog } from "@/components/CreatorDialog";
 import { useToast } from "@/components/ui/use-toast";
