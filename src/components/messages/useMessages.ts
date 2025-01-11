@@ -128,7 +128,9 @@ export function useMessages(currentUserId: string | null) {
           fetchMessages(); // Refresh messages when we get an update
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Subscription status:", status);
+      });
 
     return () => {
       console.log("Cleaning up real-time subscription");
