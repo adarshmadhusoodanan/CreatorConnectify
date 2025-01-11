@@ -9,16 +9,25 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    storage: window.localStorage,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   },
   global: {
     headers: {
       'X-Client-Info': 'supabase-js-web',
     },
   },
+  db: {
+    schema: 'public',
+  },
 });
 
-// Add simple request logging
+// Add request logging
 supabase.auth.onAuthStateChange((event, session) => {
   console.log('Auth state changed:', { event, session });
 });
+
+// Add error logging for debugging
+supabase.handleError = (error: any) => {
+  console.error('Supabase error:', error);
+  return error;
+};
