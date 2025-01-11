@@ -7,12 +7,57 @@ import { DashboardNavbar } from "@/components/DashboardNavbar";
 import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrandDialog } from "@/components/BrandDialog";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
+import { useEffect } from "react";
 
 const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { isExpanded } = useNavbar();
   const isMobile = useIsMobile();
   const [selectedBrand, setSelectedBrand] = useState(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Check if user has a creator profile
+  useEffect(() => {
+    const checkCreatorProfile = async () => {
+      console.log("Checking creator profile...");
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log("No session found");
+        navigate("/login");
+        return;
+      }
+
+      const { data: creator, error } = await supabase
+        .from("creators")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching creator profile:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load creator profile",
+        });
+        return;
+      }
+
+      if (!creator) {
+        console.log("No creator profile found, redirecting to get started");
+        navigate("/get-started");
+        return;
+      }
+
+      console.log("Creator profile found:", creator);
+    };
+
+    checkCreatorProfile();
+  }, [navigate, toast]);
 
   const { data: brands, isLoading } = useQuery({
     queryKey: ["brands", searchQuery],
