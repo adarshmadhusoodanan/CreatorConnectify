@@ -26,8 +26,7 @@ supabase.auth.onAuthStateChange((event, session) => {
   console.log('Auth state changed:', { event, session });
 });
 
-// Add error logging for debugging
-supabase.handleError = (error: any) => {
-  console.error('Supabase error:', error);
-  return error;
-};
+// Add error handling through event listeners instead of handleError
+supabase.auth.onError((error) => {
+  console.error('Supabase auth error:', error);
+});
