@@ -77,8 +77,7 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
     try {
       console.log("Starting logout process...");
       
-      // First check if we have a valid session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
         console.error("Error checking session:", sessionError);
@@ -86,15 +85,14 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
         return;
       }
 
-      if (!session) {
+      if (!sessionData.session) {
         console.log("No active session found, navigating to home");
         navigate("/");
         return;
       }
 
-      // Get the session URL synchronously
-      const { data: { url } } = await supabase.auth.getSession();
-      const hostname = new URL(url || window.location.origin).hostname.split('.')[0];
+      // Get the hostname from window.location since we're in a browser
+      const hostname = window.location.hostname.split('.')[0];
       const key = `sb-${hostname}-auth-token`;
 
       // Clear any stored session data
@@ -108,7 +106,11 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
 
       if (signOutError) {
         console.error("Error during sign out:", signOutError);
-        navigate("/");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to sign out. Please try again.",
+        });
         return;
       }
 
@@ -117,7 +119,11 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
       
     } catch (error) {
       console.error("Error in handleLogout:", error);
-      navigate("/");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+      });
     } finally {
       setIsLoggingOut(false);
     }
