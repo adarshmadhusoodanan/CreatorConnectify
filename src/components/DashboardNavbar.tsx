@@ -75,41 +75,41 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
     
     setIsLoggingOut(true);
     try {
-      // First get the current session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log("Starting logout process...");
       
-      if (sessionError) {
-        console.error("Error getting session:", sessionError);
-        throw sessionError;
-      }
-
-      if (!session) {
-        console.log("No active session found");
-        navigate("/");
-        return;
-      }
-
-      console.log("Signing out user...");
-      const { error } = await supabase.auth.signOut();
+      // First clear any existing session from storage
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
+      
+      // Then sign out from Supabase
+      const { error } = await supabase.auth.signOut({
+        scope: 'local'  // Only clear local session first
+      });
       
       if (error) {
-        console.error("Error signing out:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to sign out. Please try again.",
-        });
-        return;
+        console.error("Error in local signout:", error);
+        // Continue with navigation even if there's an error
       }
 
-      console.log("Successfully signed out");
+      // Try global sign out as a separate step
+      try {
+        await supabase.auth.signOut({
+          scope: 'global'
+        });
+      } catch (globalError) {
+        console.error("Error in global signout:", globalError);
+        // Continue with navigation even if there's an error
+      }
+
+      console.log("Successfully completed logout process");
       navigate("/");
+      
     } catch (error) {
       console.error("Error in handleLogout:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "An unexpected error occurred while signing out.",
+        description: "An error occurred while signing out. Please try again.",
       });
     } finally {
       setIsLoggingOut(false);
