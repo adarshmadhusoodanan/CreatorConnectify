@@ -22,6 +22,7 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
   const { isExpanded, toggleNavbar } = useNavbar();
   const isMobile = useIsMobile();
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -70,17 +71,49 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
   }, [userType, toast]);
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error signing out:", error);
+    if (isLoggingOut) return;
+    
+    setIsLoggingOut(true);
+    try {
+      // First get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Error getting session:", sessionError);
+        throw sessionError;
+      }
+
+      if (!session) {
+        console.log("No active session found");
+        navigate("/");
+        return;
+      }
+
+      console.log("Signing out user...");
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Error signing out:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to sign out. Please try again.",
+        });
+        return;
+      }
+
+      console.log("Successfully signed out");
+      navigate("/");
+    } catch (error) {
+      console.error("Error in handleLogout:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to sign out",
+        description: "An unexpected error occurred while signing out.",
       });
-      return;
+    } finally {
+      setIsLoggingOut(false);
     }
-    navigate("/");
   };
 
   if (isMobile && !isExpanded) {
@@ -164,10 +197,11 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
           <Button
             variant="ghost"
             onClick={handleLogout}
+            disabled={isLoggingOut}
             className={`w-full text-gray-500 hover:text-gray-700 ${!isExpanded && 'px-2'}`}
           >
-            <LogOut className="h-5 w-5" />
-            {isExpanded && <span className="ml-2">Logout</span>}
+            <LogOut className="h-5 w-4" />
+            {isExpanded && <span className="ml-2">{isLoggingOut ? "Signing out..." : "Logout"}</span>}
           </Button>
         </div>
       </nav>
