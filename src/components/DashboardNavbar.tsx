@@ -77,40 +77,45 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
     try {
       console.log("Starting logout process...");
       
-      // First clear any existing session from storage
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.removeItem('supabase.auth.token');
+      // First check if we have a valid session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      // Then sign out from Supabase
-      const { error } = await supabase.auth.signOut({
-        scope: 'local'  // Only clear local session first
-      });
-      
-      if (error) {
-        console.error("Error in local signout:", error);
-        // Continue with navigation even if there's an error
+      if (sessionError) {
+        console.error("Error checking session:", sessionError);
+        // If we can't get the session, just navigate away
+        navigate("/");
+        return;
       }
 
-      // Try global sign out as a separate step
-      try {
-        await supabase.auth.signOut({
-          scope: 'global'
-        });
-      } catch (globalError) {
-        console.error("Error in global signout:", globalError);
-        // Continue with navigation even if there's an error
+      if (!session) {
+        console.log("No active session found, navigating to home");
+        navigate("/");
+        return;
       }
 
-      console.log("Successfully completed logout process");
+      // Clear any stored session data
+      console.log("Clearing stored session data...");
+      localStorage.removeItem('sb-' + supabase.supabaseUrl + '-auth-token');
+      sessionStorage.removeItem('sb-' + supabase.supabaseUrl + '-auth-token');
+
+      // Attempt to sign out
+      console.log("Attempting to sign out...");
+      const { error: signOutError } = await supabase.auth.signOut();
+
+      if (signOutError) {
+        console.error("Error during sign out:", signOutError);
+        // Even if sign out fails, we'll navigate away
+        navigate("/");
+        return;
+      }
+
+      console.log("Successfully signed out");
       navigate("/");
       
     } catch (error) {
       console.error("Error in handleLogout:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An error occurred while signing out. Please try again.",
-      });
+      // Ensure we navigate away even if there's an error
+      navigate("/");
     } finally {
       setIsLoggingOut(false);
     }
