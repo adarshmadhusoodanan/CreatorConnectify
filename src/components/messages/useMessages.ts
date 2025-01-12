@@ -38,15 +38,9 @@ export function useMessages(currentUserId: string | null) {
       console.log("Executing messages query...");
       const { data: messages, error: messagesError } = await supabase
         .from("messages")
-        .select(`
-          *,
-          sender:brands!sender_id(id, name, image_url),
-          sender_creator:creators!sender_id(id, name, image_url),
-          receiver:brands!receiver_id(id, name, image_url),
-          receiver_creator:creators!receiver_id(id, name, image_url)
-        `)
+        .select("*")
         .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
-        .order('created_at', { ascending: true });
+        .order("created_at", { ascending: true });
 
       if (messagesError) {
         console.error("Error fetching messages:", messagesError);
@@ -57,32 +51,76 @@ export function useMessages(currentUserId: string | null) {
 
       console.log("Messages fetched successfully:", messages?.length || 0, "messages");
 
-      // Process messages into conversations
+      // Get unique user IDs from messages (excluding current user)
+      const uniqueUserIds = Array.from(
+        new Set(
+          messages?.flatMap((message) => [message.sender_id, message.receiver_id])
+        )
+      ).filter((id) => id !== currentUserId);
+
+      console.log("Unique user IDs found:", uniqueUserIds.length);
+
+      // Initialize conversations map
       const conversationsMap = new Map<string, Conversation>();
 
-      messages?.forEach((message) => {
-        const otherUserId = message.sender_id === currentUserId ? message.receiver_id : message.sender_id;
-        const otherPartyProfile = message.sender_id === currentUserId
-          ? (message.receiver || message.receiver_creator)
-          : (message.sender || message.sender_creator);
+      // For each unique user, get their profile and create a conversation
+      for (const userId of uniqueUserIds) {
+        try {
+          console.log("Fetching profile for user:", userId);
+          
+          // Try to get brand profile
+          const { data: brand, error: brandError } = await supabase
+            .from("brands")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle();
 
-        if (!conversationsMap.has(otherUserId)) {
-          conversationsMap.set(otherUserId, {
-            otherParty: otherPartyProfile ? {
-              id: otherPartyProfile.id,
-              name: otherPartyProfile.name,
-              image_url: otherPartyProfile.image_url,
-            } : undefined,
-            messages: [],
+          if (brandError) {
+            console.error("Error fetching brand profile:", brandError);
+          }
+
+          // Try to get creator profile
+          const { data: creator, error: creatorError } = await supabase
+            .from("creators")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          if (creatorError) {
+            console.error("Error fetching creator profile:", creatorError);
+          }
+
+          const profile = brand || creator;
+          if (!profile) {
+            console.log(`No profile found for user ${userId}`);
+            continue;
+          }
+
+          console.log("Profile found:", profile.name);
+
+          // Get messages for this conversation
+          const conversationMessages = messages
+            ?.filter(
+              (message) =>
+                (message.sender_id === userId || message.receiver_id === userId)
+            )
+            .sort((a, b) => 
+              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+
+          conversationsMap.set(profile.id, {
+            otherParty: {
+              id: profile.id,
+              name: profile.name,
+              image_url: profile.image_url,
+            },
+            messages: conversationMessages || [],
+            lastMessage: conversationMessages?.[conversationMessages.length - 1],
           });
+        } catch (error) {
+          console.error(`Error processing user ${userId}:`, error);
         }
-
-        const conversation = conversationsMap.get(otherUserId);
-        if (conversation) {
-          conversation.messages.push(message);
-          conversation.lastMessage = message;
-        }
-      });
+      }
 
       console.log("Conversations processed:", conversationsMap.size);
       setConversations(Array.from(conversationsMap.values()));

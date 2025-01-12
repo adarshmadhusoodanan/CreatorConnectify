@@ -15,10 +15,10 @@ const DashboardContent = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Add session check effect
   useEffect(() => {
     const checkSession = async () => {
       try {
-        console.log("Checking session...");
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -68,7 +68,7 @@ const DashboardContent = () => {
         }
 
         // Set up auth state change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
           console.log("Auth state changed:", event);
           if (event === 'SIGNED_OUT') {
             navigate("/login");
