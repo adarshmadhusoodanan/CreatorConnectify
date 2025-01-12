@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -7,33 +7,111 @@ import { DashboardNavbar } from "@/components/DashboardNavbar";
 import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CreatorDialog } from "@/components/CreatorDialog";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { isExpanded } = useNavbar();
   const isMobile = useIsMobile();
   const [selectedCreator, setSelectedCreator] = useState(null);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Add session check effect
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          toast({
+            variant: "destructive",
+            title: "Session Error",
+            description: "Please try logging in again",
+          });
+          navigate("/login");
+          return;
+        }
+
+        if (!session) {
+          console.log("No active session found");
+          navigate("/login");
+          return;
+        }
+
+        // Set up auth state change listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log("Auth state changed:", event);
+          if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            navigate("/login");
+          }
+        });
+
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error("Error checking session:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to verify session",
+        });
+        navigate("/login");
+      }
+    };
+
+    checkSession();
+  }, [navigate, toast]);
 
   const { data: creators, isLoading } = useQuery({
     queryKey: ["creators", searchQuery],
     queryFn: async () => {
-      console.log("Fetching creators with search query:", searchQuery);
-      let query = supabase.from("creators").select("*");
-      
-      if (searchQuery) {
-        query = query.ilike("name", `%${searchQuery}%`);
+      try {
+        console.log("Fetching creators with search query:", searchQuery);
+        
+        // First refresh the session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error while fetching creators:", sessionError);
+          throw new Error("Session error");
+        }
+
+        if (!session) {
+          console.error("No active session");
+          throw new Error("No active session");
+        }
+
+        let query = supabase.from("creators").select("*");
+        
+        if (searchQuery) {
+          query = query.ilike("name", `%${searchQuery}%`);
+        }
+        
+        const { data, error } = await query.limit(10);
+        
+        if (error) {
+          console.error("Error fetching creators:", error);
+          throw error;
+        }
+        
+        console.log("Fetched creators:", data);
+        return data;
+      } catch (error: any) {
+        console.error("Error in creators query:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Failed to load creators",
+        });
+        return [];
       }
-      
-      const { data, error } = await query.limit(10);
-      
-      if (error) {
-        console.error("Error fetching creators:", error);
-        throw error;
-      }
-      
-      console.log("Fetched creators:", data);
-      return data;
     },
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
   return (
