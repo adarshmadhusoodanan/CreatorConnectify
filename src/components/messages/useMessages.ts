@@ -25,9 +25,17 @@ export function useMessages(currentUserId: string | null) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchMessages = async () => {
-    console.log("Fetching messages");
+    console.log("Fetching messages for user:", currentUserId);
+    
+    if (!currentUserId) {
+      console.log("No current user ID provided");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // Get all messages where the current user is either sender or receiver
+      console.log("Executing messages query...");
       const { data: messages, error: messagesError } = await supabase
         .from("messages")
         .select("*")
@@ -36,8 +44,12 @@ export function useMessages(currentUserId: string | null) {
 
       if (messagesError) {
         console.error("Error fetching messages:", messagesError);
-        throw messagesError;
+        toast.error("Failed to load messages");
+        setIsLoading(false);
+        return;
       }
+
+      console.log("Messages fetched successfully:", messages?.length || 0, "messages");
 
       // Get unique user IDs from messages (excluding current user)
       const uniqueUserIds = Array.from(
@@ -46,31 +58,45 @@ export function useMessages(currentUserId: string | null) {
         )
       ).filter((id) => id !== currentUserId);
 
+      console.log("Unique user IDs found:", uniqueUserIds.length);
+
       // Initialize conversations map
       const conversationsMap = new Map<string, Conversation>();
 
       // For each unique user, get their profile and create a conversation
       for (const userId of uniqueUserIds) {
         try {
+          console.log("Fetching profile for user:", userId);
+          
           // Try to get brand profile
-          const { data: brand } = await supabase
+          const { data: brand, error: brandError } = await supabase
             .from("brands")
             .select("*")
             .eq("user_id", userId)
             .maybeSingle();
 
+          if (brandError) {
+            console.error("Error fetching brand profile:", brandError);
+          }
+
           // Try to get creator profile
-          const { data: creator } = await supabase
+          const { data: creator, error: creatorError } = await supabase
             .from("creators")
             .select("*")
             .eq("user_id", userId)
             .maybeSingle();
+
+          if (creatorError) {
+            console.error("Error fetching creator profile:", creatorError);
+          }
 
           const profile = brand || creator;
           if (!profile) {
             console.log(`No profile found for user ${userId}`);
             continue;
           }
+
+          console.log("Profile found:", profile.name);
 
           // Get messages for this conversation
           const conversationMessages = messages
@@ -96,6 +122,7 @@ export function useMessages(currentUserId: string | null) {
         }
       }
 
+      console.log("Conversations processed:", conversationsMap.size);
       setConversations(Array.from(conversationsMap.values()));
     } catch (error) {
       console.error("Error in fetchMessages:", error);
@@ -106,9 +133,13 @@ export function useMessages(currentUserId: string | null) {
   };
 
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId) {
+      console.log("No current user ID, skipping messages fetch");
+      return;
+    }
 
     // Initial fetch
+    console.log("Initializing messages fetch...");
     fetchMessages();
 
     // Set up real-time subscription for messages
@@ -124,7 +155,7 @@ export function useMessages(currentUserId: string | null) {
           filter: `sender_id=eq.${currentUserId},receiver_id=eq.${currentUserId}`,
         },
         (payload) => {
-          console.log("Real-time message update:", payload);
+          console.log("Real-time message update received:", payload);
           fetchMessages(); // Refresh messages when we get an update
         }
       )
