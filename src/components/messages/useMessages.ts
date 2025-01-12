@@ -40,7 +40,7 @@ export function useMessages(currentUserId: string | null) {
         .from("messages")
         .select("*")
         .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
 
       if (messagesError) {
         console.error("Error fetching messages:", messagesError);
