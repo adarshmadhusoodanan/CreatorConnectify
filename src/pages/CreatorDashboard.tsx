@@ -8,14 +8,15 @@ import { NavbarProvider } from "@/contexts/NavbarContext";
 import { BrandDialog } from "@/components/BrandDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useNavbar } from "@/contexts/NavbarContext";
 
 const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isExpanded } = useNavbar();
 
-  // Add session check effect
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -38,7 +39,6 @@ const DashboardContent = () => {
           return;
         }
 
-        // Check if user has a creator profile
         const { data: creator, error: creatorError } = await supabase
           .from("creators")
           .select("*")
@@ -66,18 +66,6 @@ const DashboardContent = () => {
           navigate("/get-started");
           return;
         }
-
-        // Set up auth state change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-          console.log("Auth state changed:", event);
-          if (event === 'SIGNED_OUT') {
-            navigate("/login");
-          }
-        });
-
-        return () => {
-          subscription.unsubscribe();
-        };
       } catch (error) {
         console.error("Error checking session:", error);
         toast({
@@ -98,19 +86,6 @@ const DashboardContent = () => {
       try {
         console.log("Fetching brands with search query:", searchQuery);
         
-        // First refresh the session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Session error while fetching brands:", sessionError);
-          throw new Error("Session error");
-        }
-
-        if (!session) {
-          console.error("No active session");
-          throw new Error("No active session");
-        }
-
         let query = supabase.from("brands").select("*");
         
         if (searchQuery) {
@@ -141,7 +116,7 @@ const DashboardContent = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen bg-background ${isExpanded ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
       <div className="p-8">
         <h1 className="text-3xl font-bold mb-8">Find Brands</h1>
         
@@ -165,9 +140,9 @@ const DashboardContent = () => {
               />
             ))}
           </div>
-        ) : (
+        ) : brands && brands.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {brands?.map((brand) => (
+            {brands.map((brand) => (
               <div
                 key={brand.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all cursor-pointer"
@@ -189,6 +164,10 @@ const DashboardContent = () => {
               </div>
             ))}
           </div>
+        ) : (
+          <div className="text-center text-gray-500 mt-8">
+            No brands found. Try adjusting your search.
+          </div>
         )}
 
         <BrandDialog
@@ -204,8 +183,10 @@ const DashboardContent = () => {
 const CreatorDashboard = () => {
   return (
     <NavbarProvider>
-      <DashboardNavbar userType="creator" />
-      <DashboardContent />
+      <div className="flex">
+        <DashboardNavbar userType="creator" />
+        <DashboardContent />
+      </div>
     </NavbarProvider>
   );
 };
