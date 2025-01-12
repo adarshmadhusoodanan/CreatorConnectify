@@ -188,9 +188,6 @@ const GetStarted = () => {
                         brandAccent: '#D946EF',
                         brandButtonText: 'white',
                       },
-                      borderWidths: {
-                        buttonBorder: '2px',
-                      },
                       radii: {
                         borderRadiusButton: '0.5rem',
                       },
