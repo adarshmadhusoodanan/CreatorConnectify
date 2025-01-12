@@ -35,20 +35,10 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return [];
 
-      // First, get all messages for the current user
+      // First get all messages
       const { data: messages, error } = await supabase
         .from("messages")
-        .select(`
-          *,
-          sender_profile:sender_id(
-            brands:brands(id, name, image_url),
-            creators:creators(id, name, image_url)
-          ),
-          receiver_profile:receiver_id(
-            brands:brands(id, name, image_url),
-            creators:creators(id, name, image_url)
-          )
-        `)
+        .select("*")
         .or(`sender_id.eq.${session.user.id},receiver_id.eq.${session.user.id}`)
         .order('created_at', { ascending: true });
 
@@ -57,16 +47,33 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
         throw error;
       }
 
+      // Then get all unique user IDs from messages
+      const uniqueUserIds = [...new Set(messages?.map(m => 
+        m.sender_id === session.user.id ? m.receiver_id : m.sender_id
+      ))];
+
+      // Fetch profiles for these users
+      const { data: profiles, error: profilesError } = await supabase
+        .from(userType === "brand" ? "creators" : "brands")
+        .select("*")
+        .in('user_id', uniqueUserIds);
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+
+      // Create a map of user_id to profile for easy lookup
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]));
+      
       // Group messages by conversation
       const conversationsMap = new Map<string, Conversation>();
       
       messages?.forEach((message) => {
         const isUserSender = message.sender_id === session.user.id;
-        const otherPartyProfile = isUserSender 
-          ? message.receiver_profile 
-          : message.sender_profile;
+        const otherUserId = isUserSender ? message.receiver_id : message.sender_id;
+        const profile = profileMap.get(otherUserId);
         
-        const profile = otherPartyProfile[userType === "brand" ? "creators" : "brands"];
         if (!profile) return;
         
         const conversationId = profile.id;
