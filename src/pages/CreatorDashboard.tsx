@@ -9,13 +9,16 @@ import { BrandDialog } from "@/components/BrandDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useNavbar } from "@/contexts/NavbarContext";
+import { MessagesDialog } from "@/components/MessagesDialog";
 
 const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState(null);
+  const [selectedBrand, setSelectedBrand] = useState<any>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { isExpanded } = useNavbar();
+  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+  const [isBrandDialogOpen, setIsBrandDialogOpen] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -115,6 +118,16 @@ const DashboardContent = () => {
     refetchOnWindowFocus: false,
   });
 
+  const handleBrandClick = async (brand: any) => {
+    setSelectedBrand(brand);
+    setIsBrandDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedBrand(null);
+    setIsBrandDialogOpen(false);
+  };
+
   return (
     <div className={`min-h-screen bg-background ${isExpanded ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
       <div className="p-8">
@@ -146,7 +159,7 @@ const DashboardContent = () => {
               <div
                 key={brand.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all cursor-pointer"
-                onClick={() => setSelectedBrand(brand)}
+                onClick={() => handleBrandClick(brand)}
               >
                 <div className="aspect-w-16 aspect-h-9">
                   <img
@@ -172,8 +185,14 @@ const DashboardContent = () => {
 
         <BrandDialog
           brand={selectedBrand}
-          isOpen={!!selectedBrand}
-          onClose={() => setSelectedBrand(null)}
+          isOpen={isBrandDialogOpen}
+          onClose={handleCloseDialog}
+        />
+
+        <MessagesDialog
+          isOpen={isMessagesOpen}
+          onClose={() => setIsMessagesOpen(false)}
+          userType="creator"
         />
       </div>
     </div>
