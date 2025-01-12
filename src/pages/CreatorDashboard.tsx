@@ -42,11 +42,14 @@ const DashboardContent = () => {
           return;
         }
 
+        console.log("Checking creator profile for user:", session.user.id);
         const { data: creator, error: creatorError } = await supabase
           .from("creators")
           .select("*")
           .eq("user_id", session.user.id)
           .maybeSingle();
+
+        console.log("Creator profile response:", { data: creator, error: creatorError });
 
         if (creatorError) {
           console.error("Error fetching creator profile:", creatorError);
@@ -69,6 +72,8 @@ const DashboardContent = () => {
           navigate("/get-started");
           return;
         }
+
+        console.log("Creator profile found:", creator);
       } catch (error) {
         console.error("Error checking session:", error);
         toast({
