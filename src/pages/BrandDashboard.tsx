@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -9,7 +9,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { CreatorDialog } from "@/components/CreatorDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 
 const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -19,57 +18,52 @@ const DashboardContent = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Add session check effect
   useEffect(() => {
-    const checkBrandProfile = async () => {
+    const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (!session) {
-          console.log("No session found, redirecting to login");
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          toast({
+            variant: "destructive",
+            title: "Session Error",
+            description: "Please try logging in again",
+          });
           navigate("/login");
           return;
         }
 
-        console.log("Checking brand profile for user:", session.user.id);
-        const { data: brand, error } = await supabase
-          .from("brands")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.error("Error fetching brand profile:", error);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to load brand profile",
-          });
+        if (!session) {
+          console.log("No active session found");
+          navigate("/login");
           return;
         }
 
-        if (!brand) {
-          console.log("No brand profile found, redirecting to get started");
-          toast({
-            variant: "destructive",
-            title: "No Brand Profile",
-            description: "Please complete your brand profile setup",
-          });
-          navigate("/get-started");
-          return;
-        }
+        // Set up auth state change listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log("Auth state changed:", event);
+          if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            navigate("/login");
+          }
+        });
 
-        console.log("Brand profile found:", brand);
-      } catch (error: any) {
-        console.error("Error in checkBrandProfile:", error);
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error("Error checking session:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: error.message || "An unexpected error occurred",
+          description: "Failed to verify session",
         });
+        navigate("/login");
       }
     };
 
-    checkBrandProfile();
+    checkSession();
   }, [navigate, toast]);
 
   const { data: creators, isLoading } = useQuery({
@@ -77,6 +71,20 @@ const DashboardContent = () => {
     queryFn: async () => {
       try {
         console.log("Fetching creators with search query:", searchQuery);
+        
+        // First refresh the session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error while fetching creators:", sessionError);
+          throw new Error("Session error");
+        }
+
+        if (!session) {
+          console.error("No active session");
+          throw new Error("No active session");
+        }
+
         let query = supabase.from("creators").select("*");
         
         if (searchQuery) {
@@ -93,15 +101,17 @@ const DashboardContent = () => {
         console.log("Fetched creators:", data);
         return data;
       } catch (error: any) {
-        console.error("Error fetching creators:", error);
+        console.error("Error in creators query:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to load creators",
+          description: error.message || "Failed to load creators",
         });
         return [];
       }
     },
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
   return (
