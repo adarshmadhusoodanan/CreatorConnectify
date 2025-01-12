@@ -41,10 +41,39 @@ const DashboardContent = () => {
           return;
         }
 
+        // Check if user has a brand profile
+        const { data: brand, error: brandError } = await supabase
+          .from("brands")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        if (brandError) {
+          console.error("Error fetching brand profile:", brandError);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to verify brand profile",
+          });
+          navigate("/login");
+          return;
+        }
+
+        if (!brand) {
+          console.log("No brand profile found");
+          toast({
+            variant: "destructive",
+            title: "Profile Required",
+            description: "Please complete your brand profile setup",
+          });
+          navigate("/get-started");
+          return;
+        }
+
         // Set up auth state change listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
           console.log("Auth state changed:", event);
-          if (event === 'SIGNED_OUT') {
+          if (!session) {
             navigate("/login");
           }
         });
@@ -110,8 +139,8 @@ const DashboardContent = () => {
         return [];
       }
     },
-    retry: 1,
-    refetchOnWindowFocus: false,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   return (
@@ -142,9 +171,9 @@ const DashboardContent = () => {
               />
             ))}
           </div>
-        ) : (
+        ) : creators && creators.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {creators?.map((creator) => (
+            {creators.map((creator) => (
               <div
                 key={creator.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all cursor-pointer"
@@ -166,6 +195,10 @@ const DashboardContent = () => {
               </div>
             ))}
           </div>
+        ) : (
+          <div className="text-center text-gray-500 mt-8">
+            No creators found. Try adjusting your search.
+          </div>
         )}
 
         <CreatorDialog
@@ -181,8 +214,10 @@ const DashboardContent = () => {
 const BrandDashboard = () => {
   return (
     <NavbarProvider>
-      <DashboardNavbar userType="brand" />
-      <DashboardContent />
+      <div className="flex">
+        <DashboardNavbar userType="brand" />
+        <DashboardContent />
+      </div>
     </NavbarProvider>
   );
 };
