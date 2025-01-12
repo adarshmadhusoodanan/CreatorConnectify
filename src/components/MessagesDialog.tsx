@@ -138,30 +138,25 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
                     <span className="font-medium">{conversation.otherParty.name}</span>
                   </div>
                   <div className="space-y-2">
-                    {conversation.messages.map((message) => {
-                      const { data: { session } } = await supabase.auth.getSession();
-                      const isSender = message.sender_id === session?.user?.id;
-                      
-                      return (
+                    {conversation.messages.map((message) => (
+                      <div 
+                        key={message.id} 
+                        className={`flex ${message.sender_id === message.receiver_id ? 'justify-end' : 'justify-start'}`}
+                      >
                         <div 
-                          key={message.id} 
-                          className={`flex ${isSender ? 'justify-end' : 'justify-start'}`}
+                          className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                            message.sender_id === message.receiver_id
+                              ? 'bg-primary text-white'
+                              : 'bg-gray-100'
+                          }`}
                         >
-                          <div 
-                            className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                              isSender
-                                ? 'bg-primary text-white ml-auto'
-                                : 'bg-gray-100 mr-auto'
-                            }`}
-                          >
-                            <p className="text-sm">{message.content}</p>
-                            <span className="text-xs opacity-70">
-                              {format(new Date(message.created_at), 'MMM d, h:mm a')}
-                            </span>
-                          </div>
+                          <p className="text-sm">{message.content}</p>
+                          <span className="text-xs opacity-70">
+                            {format(new Date(message.created_at), 'MMM d, h:mm a')}
+                          </span>
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
