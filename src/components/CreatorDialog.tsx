@@ -10,8 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { MessageSquare, UserRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
 
 interface CreatorDialogProps {
   creator: {
@@ -26,63 +24,18 @@ interface CreatorDialogProps {
 
 export function CreatorDialog({ creator, isOpen, onClose }: CreatorDialogProps) {
   const [message, setMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const queryClient = useQueryClient();
 
   const handleSendMessage = async () => {
     if (!message.trim()) {
       toast.error("Please enter a message");
       return;
     }
-
-    setIsSending(true);
     
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("You must be logged in to send messages");
-        return;
-      }
-
-      const { data: creatorData, error: creatorError } = await supabase
-        .from("creators")
-        .select("user_id")
-        .eq("id", creator?.id)
-        .single();
-
-      if (creatorError || !creatorData) {
-        console.error("Error fetching creator:", creatorError);
-        toast.error("Failed to send message");
-        return;
-      }
-
-      const { error: messageError } = await supabase
-        .from("messages")
-        .insert({
-          sender_id: session.user.id,
-          receiver_id: creatorData.user_id,
-          content: message,
-        });
-
-      if (messageError) {
-        console.error("Error sending message:", messageError);
-        toast.error("Failed to send message");
-        return;
-      }
-
-      console.log("Message sent successfully to creator:", creator?.id);
-      toast.success("Message sent successfully!");
-      setMessage("");
-      onClose();
-      
-      // Invalidate messages query to refresh the messages dialog
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Failed to send message");
-    } finally {
-      setIsSending(false);
-    }
+    // TODO: Implement message sending functionality
+    console.log("Sending message to creator:", creator?.id, message);
+    toast.success("Message sent successfully!");
+    setMessage("");
+    onClose();
   };
 
   if (!creator) return null;
@@ -122,10 +75,9 @@ export function CreatorDialog({ creator, isOpen, onClose }: CreatorDialogProps) 
                 <Button
                   className="w-full bg-gradient-to-r from-[#8B5CF6] via-[#D946EF] to-[#F97316] hover:opacity-90 transition-opacity"
                   onClick={handleSendMessage}
-                  disabled={isSending}
                 >
                   <MessageSquare className="mr-2 h-4 w-4" />
-                  {isSending ? "Sending..." : "Send Message"}
+                  Send Message
                 </Button>
               </div>
             </div>

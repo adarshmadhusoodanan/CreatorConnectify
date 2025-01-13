@@ -1,13 +1,16 @@
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { Building2, UserRound } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 
 interface MessagesDialogProps {
   isOpen: boolean;
@@ -15,140 +18,147 @@ interface MessagesDialogProps {
   userType: "brand" | "creator";
 }
 
-export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProps) {
-  const [messages, setMessages] = useState<any[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [newMessage, setNewMessage] = useState("");
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
-  const [isSending, setIsSending] = useState(false);
+interface Conversation {
+  otherParty: {
+    id: string;
+    name: string;
+    image_url: string | null;
+  };
+  messages: any[];
+}
 
-  useEffect(() => {
-    const fetchSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Error fetching session:", error);
-        return;
-      }
+export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProps) {
+  const { data: conversations, isLoading } = useQuery({
+    queryKey: ["conversations"],
+    queryFn: async () => {
+      console.log("Fetching messages");
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.log("No session found");
-        return;
-      }
-      setCurrentUserId(session.user.id);
-    };
-
-    fetchSession();
-  }, []);
-
-  useEffect(() => {
-    const fetchMessages = async () => {
-      if (!currentUserId) {
-        console.log("No current user ID, skipping messages fetch");
-        return;
+        return [];
       }
 
-      setIsLoading(true);
-      try {
-        console.log("Fetching messages for user:", currentUserId);
-        const { data, error } = await supabase
-          .from("messages")
-          .select("*")
-          .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
-          .order("created_at", { ascending: true });
-
-        if (error) {
-          console.error("Error fetching messages:", error);
-          toast.error("Failed to load messages");
-          return;
-        }
-
-        console.log("Messages fetched:", data);
-        setMessages(data || []);
-      } catch (error) {
-        console.error("Error in fetchMessages:", error);
-        toast.error("Failed to load messages");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMessages();
-  }, [currentUserId]);
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !currentUserId || !selectedConversation) {
-      toast.error("Please enter a message");
-      return;
-    }
-
-    setIsSending(true);
-    try {
-      const { error } = await supabase
+      console.log("Session found, fetching messages for user:", session.user.id);
+      const { data: messages, error } = await supabase
         .from("messages")
-        .insert({
-          sender_id: currentUserId,
-          receiver_id: selectedConversation,
-          content: newMessage,
-        });
+        .select(`
+          id,
+          content,
+          created_at,
+          sender_id,
+          receiver_id,
+          brands!sender_id(id, name, image_url),
+          creators!sender_id(id, name, image_url)
+        `)
+        .or(`sender_id.eq.${session.user.id},receiver_id.eq.${session.user.id}`)
+        .order('created_at', { ascending: true });
 
       if (error) {
-        console.error("Error sending message:", error);
-        toast.error("Failed to send message");
-        return;
+        console.error("Error fetching messages:", error);
+        throw error;
       }
 
-      setNewMessage("");
-      // Refresh messages
-      const { data, error: fetchError } = await supabase
-        .from("messages")
-        .select("*")
-        .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
-        .order("created_at", { ascending: true });
+      console.log("Fetched messages:", messages);
 
-      if (fetchError) {
-        console.error("Error refreshing messages:", fetchError);
-        return;
-      }
+      // Group messages by conversation
+      const conversationsMap = new Map<string, Conversation>();
+      
+      messages?.forEach((message) => {
+        const isUserSender = message.sender_id === session.user.id;
+        const otherPartyId = isUserSender ? message.receiver_id : message.sender_id;
+        
+        if (!conversationsMap.has(otherPartyId)) {
+          // Get the other party's profile based on user type
+          const otherPartyProfile = isUserSender 
+            ? (userType === "brand" ? message.creators : message.brands)
+            : (userType === "brand" ? message.creators : message.brands);
 
-      setMessages(data || []);
-    } catch (error) {
-      console.error("Error in handleSendMessage:", error);
-      toast.error("Failed to send message");
-    } finally {
-      setIsSending(false);
-    }
-  };
+          if (!otherPartyProfile) return;
+          
+          conversationsMap.set(otherPartyId, {
+            otherParty: {
+              id: otherPartyProfile.id,
+              name: otherPartyProfile.name,
+              image_url: otherPartyProfile.image_url,
+            },
+            messages: [],
+          });
+        }
+        
+        conversationsMap.get(otherPartyId)?.messages.push(message);
+      });
+
+      return Array.from(conversationsMap.values());
+    },
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px]">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Messages</DialogTitle>
+          <DialogTitle className="text-center">Messages</DialogTitle>
+          <DialogDescription className="text-center">
+            Your conversations with {userType === "brand" ? "creators" : "brands"}
+          </DialogDescription>
         </DialogHeader>
-        <div className="mt-4">
+        <ScrollArea className="h-[400px] pr-4">
           {isLoading ? (
-            <div>Loading messages...</div>
-          ) : messages.length > 0 ? (
-            <ScrollArea className="h-[400px]">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`p-2 mb-2 rounded ${
-                    message.sender_id === currentUserId
-                      ? "bg-primary/10 ml-auto"
-                      : "bg-secondary/10"
-                  }`}
-                >
-                  {message.content}
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-start space-x-4 animate-pulse">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-1/4" />
+                    <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  </div>
                 </div>
               ))}
-            </ScrollArea>
+            </div>
+          ) : conversations?.length === 0 ? (
+            <p className="text-center text-gray-500">No messages yet</p>
           ) : (
-            <div className="text-center text-muted-foreground">
-              No messages yet
+            <div className="space-y-6">
+              {conversations?.map((conversation) => (
+                <div key={conversation.otherParty.id} className="space-y-4">
+                  <div className="flex items-center space-x-2 pb-2 border-b">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={conversation.otherParty.image_url || undefined} />
+                      <AvatarFallback>
+                        {userType === "brand" ? (
+                          <UserRound className="h-4 w-4" />
+                        ) : (
+                          <Building2 className="h-4 w-4" />
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{conversation.otherParty.name}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {conversation.messages.map((message) => (
+                      <div 
+                        key={message.id} 
+                        className={`flex ${message.sender_id === message.receiver_id ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div 
+                          className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                            message.sender_id === message.receiver_id
+                              ? 'bg-primary text-white'
+                              : 'bg-gray-100'
+                          }`}
+                        >
+                          <p className="text-sm">{message.content}</p>
+                          <span className="text-xs opacity-70">
+                            {format(new Date(message.created_at), 'MMM d, h:mm a')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

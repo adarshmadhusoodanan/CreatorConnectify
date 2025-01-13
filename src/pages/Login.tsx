@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -13,113 +12,57 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check for existing session on mount
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        console.log("Checking existing session:", session);
-        
-        if (error) {
-          console.error("Session check error:", error);
-          return;
-        }
-
-        if (session) {
-          console.log("Valid session found, redirecting...");
-          handleSuccessfulLogin();
-        }
-      } catch (error) {
-        console.error("Session check failed:", error);
-      }
-    };
-
-    checkSession();
-  }, []);
-
-  // Set up auth state change listener
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, session);
-      
-      if (event === 'SIGNED_IN' && session) {
-        console.log("Sign in detected, redirecting...");
-        handleSuccessfulLogin();
-      }
-      
-      if (event === 'TOKEN_REFRESHED') {
-        console.log("Token refreshed successfully");
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const handleSuccessfulLogin = async () => {
-    try {
-      // Check for brand profile
-      const { data: brand } = await supabase
-        .from("brands")
-        .select("id")
-        .eq("user_id", (await supabase.auth.getUser()).data.user?.id)
-        .maybeSingle();
-
-      if (brand) {
-        console.log("Brand profile found, navigating to brand dashboard");
-        navigate("/dashboard/brand");
-        return;
-      }
-
-      // Check for creator profile
-      const { data: creator } = await supabase
-        .from("creators")
-        .select("id")
-        .eq("user_id", (await supabase.auth.getUser()).data.user?.id)
-        .maybeSingle();
-
-      if (creator) {
-        console.log("Creator profile found, navigating to creator dashboard");
-        navigate("/dashboard/creator");
-        return;
-      }
-
-      console.log("No profile found, navigating to get started");
-      navigate("/get-started");
-    } catch (error) {
-      console.error("Profile check error:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to check user profile",
-      });
-    }
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
       console.log("Attempting to sign in...");
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data: { session }, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        console.error("Sign in error:", error);
-        throw error;
+      if (signInError) {
+        console.error("Sign in error:", signInError);
+        throw signInError;
       }
 
-      if (!data.session) {
+      if (!session) {
         console.error("No session after sign in");
         throw new Error("Failed to sign in");
       }
 
-      console.log("Sign in successful");
-      // handleSuccessfulLogin will be called by the auth state change listener
+      console.log("Successfully signed in, checking profiles...");
+      
+      // Check if user has a brand profile
+      const { data: brand } = await supabase
+        .from("brands")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (brand) {
+        console.log("Brand profile found, navigating to brand dashboard...");
+        navigate("/dashboard/brand");
+        return;
+      }
+
+      // Check if user has a creator profile
+      const { data: creator } = await supabase
+        .from("creators")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (creator) {
+        console.log("Creator profile found, navigating to creator dashboard...");
+        navigate("/dashboard/creator");
+        return;
+      }
+
+      console.log("No profile found, navigating to get started...");
+      navigate("/get-started");
     } catch (error: any) {
       console.error("Login error:", error);
       toast({

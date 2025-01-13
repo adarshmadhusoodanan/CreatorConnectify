@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -7,140 +7,33 @@ import { DashboardNavbar } from "@/components/DashboardNavbar";
 import { NavbarProvider, useNavbar } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CreatorDialog } from "@/components/CreatorDialog";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 
 const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { isExpanded } = useNavbar();
   const isMobile = useIsMobile();
   const [selectedCreator, setSelectedCreator] = useState(null);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        console.log("Checking session...");
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          toast({
-            variant: "destructive",
-            title: "Session Error",
-            description: "Please try logging in again",
-          });
-          navigate("/login");
-          return;
-        }
-
-        if (!session) {
-          console.log("No active session found");
-          navigate("/login");
-          return;
-        }
-
-        // Check if user has a brand profile
-        const { data: brand, error: brandError } = await supabase
-          .from("brands")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        if (brandError) {
-          console.error("Error fetching brand profile:", brandError);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to verify brand profile",
-          });
-          navigate("/login");
-          return;
-        }
-
-        if (!brand) {
-          console.log("No brand profile found");
-          toast({
-            variant: "destructive",
-            title: "Profile Required",
-            description: "Please complete your brand profile setup",
-          });
-          navigate("/get-started");
-          return;
-        }
-
-        // Set up auth state change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          console.log("Auth state changed:", event);
-          if (!session) {
-            navigate("/login");
-          }
-        });
-
-        return () => {
-          subscription.unsubscribe();
-        };
-      } catch (error) {
-        console.error("Error checking session:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to verify session",
-        });
-        navigate("/login");
-      }
-    };
-
-    checkSession();
-  }, [navigate, toast]);
 
   const { data: creators, isLoading } = useQuery({
     queryKey: ["creators", searchQuery],
     queryFn: async () => {
-      try {
-        console.log("Fetching creators with search query:", searchQuery);
-        
-        // First refresh the session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Session error while fetching creators:", sessionError);
-          throw new Error("Session error");
-        }
-
-        if (!session) {
-          console.error("No active session");
-          throw new Error("No active session");
-        }
-
-        let query = supabase.from("creators").select("*");
-        
-        if (searchQuery) {
-          query = query.ilike("name", `%${searchQuery}%`);
-        }
-        
-        const { data, error } = await query.limit(10);
-        
-        if (error) {
-          console.error("Error fetching creators:", error);
-          throw error;
-        }
-        
-        console.log("Fetched creators:", data);
-        return data;
-      } catch (error: any) {
-        console.error("Error in creators query:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message || "Failed to load creators",
-        });
-        return [];
+      console.log("Fetching creators with search query:", searchQuery);
+      let query = supabase.from("creators").select("*");
+      
+      if (searchQuery) {
+        query = query.ilike("name", `%${searchQuery}%`);
       }
+      
+      const { data, error } = await query.limit(10);
+      
+      if (error) {
+        console.error("Error fetching creators:", error);
+        throw error;
+      }
+      
+      console.log("Fetched creators:", data);
+      return data;
     },
-    retry: 2,
-    retryDelay: 1000,
   });
 
   return (
@@ -171,9 +64,9 @@ const DashboardContent = () => {
               />
             ))}
           </div>
-        ) : creators && creators.length > 0 ? (
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {creators.map((creator) => (
+            {creators?.map((creator) => (
               <div
                 key={creator.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all cursor-pointer"
@@ -195,10 +88,6 @@ const DashboardContent = () => {
               </div>
             ))}
           </div>
-        ) : (
-          <div className="text-center text-gray-500 mt-8">
-            No creators found. Try adjusting your search.
-          </div>
         )}
 
         <CreatorDialog
@@ -214,10 +103,8 @@ const DashboardContent = () => {
 const BrandDashboard = () => {
   return (
     <NavbarProvider>
-      <div className="flex">
-        <DashboardNavbar userType="brand" />
-        <DashboardContent />
-      </div>
+      <DashboardNavbar userType="brand" />
+      <DashboardContent />
     </NavbarProvider>
   );
 };
