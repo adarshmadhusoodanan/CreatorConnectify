@@ -39,26 +39,47 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
       }
 
       console.log("Session found, fetching messages for user:", session.user.id);
-      const { data: messages, error } = await supabase
+      
+      // First, get all messages for the current user
+      const { data: messages, error: messagesError } = await supabase
         .from("messages")
         .select(`
           id,
           content,
           created_at,
           sender_id,
-          receiver_id,
-          brands!sender_id(id, name, image_url),
-          creators!sender_id(id, name, image_url)
+          receiver_id
         `)
         .or(`sender_id.eq.${session.user.id},receiver_id.eq.${session.user.id}`)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error("Error fetching messages:", error);
-        throw error;
+      if (messagesError) {
+        console.error("Error fetching messages:", messagesError);
+        throw messagesError;
       }
 
       console.log("Fetched messages:", messages);
+
+      // Get unique user IDs from messages (excluding current user)
+      const uniqueUserIds = [...new Set(messages?.map(m => 
+        m.sender_id === session.user.id ? m.receiver_id : m.sender_id
+      ))];
+
+      // Get profiles for these users
+      const { data: brands } = await supabase
+        .from('brands')
+        .select('user_id, id, name, image_url')
+        .in('user_id', uniqueUserIds);
+
+      const { data: creators } = await supabase
+        .from('creators')
+        .select('user_id, id, name, image_url')
+        .in('user_id', uniqueUserIds);
+
+      // Create a map of user_id to profile
+      const profilesMap = new Map();
+      brands?.forEach(brand => profilesMap.set(brand.user_id, { ...brand, type: 'brand' }));
+      creators?.forEach(creator => profilesMap.set(creator.user_id, { ...creator, type: 'creator' }));
 
       // Group messages by conversation
       const conversationsMap = new Map<string, Conversation>();
@@ -68,18 +89,14 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
         const otherPartyId = isUserSender ? message.receiver_id : message.sender_id;
         
         if (!conversationsMap.has(otherPartyId)) {
-          // Get the other party's profile based on user type
-          const otherPartyProfile = isUserSender 
-            ? (userType === "brand" ? message.creators : message.brands)
-            : (userType === "brand" ? message.creators : message.brands);
-
-          if (!otherPartyProfile) return;
+          const profile = profilesMap.get(otherPartyId);
+          if (!profile) return;
           
           conversationsMap.set(otherPartyId, {
             otherParty: {
-              id: otherPartyProfile.id,
-              name: otherPartyProfile.name,
-              image_url: otherPartyProfile.image_url,
+              id: profile.id,
+              name: profile.name,
+              image_url: profile.image_url,
             },
             messages: [],
           });
