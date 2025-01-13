@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Building2, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface BrandDialogProps {
   brand: {
@@ -25,18 +27,63 @@ interface BrandDialogProps {
 
 export function BrandDialog({ brand, isOpen, onClose }: BrandDialogProps) {
   const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleSendMessage = async () => {
     if (!message.trim()) {
       toast.error("Please enter a message");
       return;
     }
+
+    setIsSending(true);
     
-    // TODO: Implement message sending functionality
-    console.log("Sending message to brand:", brand?.id, message);
-    toast.success("Message sent successfully!");
-    setMessage("");
-    onClose();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("You must be logged in to send messages");
+        return;
+      }
+
+      const { data: brandData, error: brandError } = await supabase
+        .from("brands")
+        .select("user_id")
+        .eq("id", brand?.id)
+        .single();
+
+      if (brandError || !brandData) {
+        console.error("Error fetching brand:", brandError);
+        toast.error("Failed to send message");
+        return;
+      }
+
+      const { error: messageError } = await supabase
+        .from("messages")
+        .insert({
+          sender_id: session.user.id,
+          receiver_id: brandData.user_id,
+          content: message,
+        });
+
+      if (messageError) {
+        console.error("Error sending message:", messageError);
+        toast.error("Failed to send message");
+        return;
+      }
+
+      console.log("Message sent successfully to brand:", brand?.id);
+      toast.success("Message sent successfully!");
+      setMessage("");
+      onClose();
+      
+      // Invalidate messages query to refresh the messages dialog
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   if (!brand) return null;
@@ -90,9 +137,10 @@ export function BrandDialog({ brand, isOpen, onClose }: BrandDialogProps) {
                 <Button
                   className="w-full bg-gradient-to-r from-[#8B5CF6] via-[#D946EF] to-[#F97316] hover:opacity-90 transition-opacity"
                   onClick={handleSendMessage}
+                  disabled={isSending}
                 >
                   <MessageSquare className="mr-2 h-4 w-4" />
-                  Send Message
+                  {isSending ? "Sending..." : "Send Message"}
                 </Button>
               </div>
             </div>
