@@ -33,20 +33,22 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
     queryFn: async () => {
       console.log("Fetching messages");
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return [];
+      if (!session) {
+        console.log("No session found");
+        return [];
+      }
 
+      console.log("Session found, fetching messages for user:", session.user.id);
       const { data: messages, error } = await supabase
         .from("messages")
         .select(`
-          *,
-          sender:sender_id(
-            brands ( id, name, image_url ),
-            creators ( id, name, image_url )
-          ),
-          receiver:receiver_id(
-            brands ( id, name, image_url ),
-            creators ( id, name, image_url )
-          )
+          id,
+          content,
+          created_at,
+          sender_id,
+          receiver_id,
+          brands!sender_id(id, name, image_url),
+          creators!sender_id(id, name, image_url)
         `)
         .or(`sender_id.eq.${session.user.id},receiver_id.eq.${session.user.id}`)
         .order('created_at', { ascending: true });
@@ -56,20 +58,24 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
         throw error;
       }
 
+      console.log("Fetched messages:", messages);
+
       // Group messages by conversation
       const conversationsMap = new Map<string, Conversation>();
       
       messages?.forEach((message) => {
         const isUserSender = message.sender_id === session.user.id;
-        const otherParty = isUserSender ? message.receiver : message.sender;
-        const otherPartyProfile = otherParty[userType === "brand" ? "creators" : "brands"];
+        const otherPartyId = isUserSender ? message.receiver_id : message.sender_id;
         
-        if (!otherPartyProfile) return;
-        
-        const conversationId = otherPartyProfile.id;
-        
-        if (!conversationsMap.has(conversationId)) {
-          conversationsMap.set(conversationId, {
+        if (!conversationsMap.has(otherPartyId)) {
+          // Get the other party's profile based on user type
+          const otherPartyProfile = isUserSender 
+            ? (userType === "brand" ? message.creators : message.brands)
+            : (userType === "brand" ? message.creators : message.brands);
+
+          if (!otherPartyProfile) return;
+          
+          conversationsMap.set(otherPartyId, {
             otherParty: {
               id: otherPartyProfile.id,
               name: otherPartyProfile.name,
@@ -79,7 +85,7 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
           });
         }
         
-        conversationsMap.get(conversationId)?.messages.push(message);
+        conversationsMap.get(otherPartyId)?.messages.push(message);
       });
 
       return Array.from(conversationsMap.values());

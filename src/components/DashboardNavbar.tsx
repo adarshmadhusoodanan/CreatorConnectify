@@ -1,153 +1,70 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { LogOut, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { NavbarLinks } from "./navbar/NavbarLinks";
+import { NavbarAvatar } from "./navbar/NavbarAvatar";
+import { SocialLinks } from "./navbar/SocialLinks";
+import { MessagesDialog } from "./MessagesDialog";
 import { useNavbar } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MessagesDialog } from "./MessagesDialog";
-import { NavbarAvatar } from "./navbar/NavbarAvatar";
-import { NavbarLinks } from "./navbar/NavbarLinks";
-import { SocialLinks } from "./navbar/SocialLinks";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface DashboardNavbarProps {
   userType: "brand" | "creator";
 }
 
-export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [profile, setProfile] = useState<any>(null);
-  const { isExpanded, toggleNavbar } = useNavbar();
-  const isMobile = useIsMobile();
+export function DashboardNavbar({ userType }: DashboardNavbarProps) {
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const { data, error } = await supabase
-        .from(userType === "brand" ? "brands" : "creators")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .single();
-
-      if (error) {
-        console.error("Error fetching profile:", error);
-        return;
-      }
-
-      console.log(`Fetched ${userType} profile:`, data);
-      setProfile(data);
-    };
-
-    fetchProfile();
-  }, [userType]);
+  const { isExpanded, toggleExpanded } = useNavbar();
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error signing out:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to sign out",
-      });
-      return;
+    try {
+      console.log("Attempting to sign out...");
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Error signing out:", error);
+        // If we get a session_not_found error, we can still redirect the user
+        if (error.message.includes("session_not_found")) {
+          navigate("/");
+          return;
+        }
+        throw error;
+      }
+      navigate("/");
+    } catch (error: any) {
+      console.error("Error in handleLogout:", error);
+      toast.error("Error signing out. Please try again.");
     }
-    navigate("/");
   };
-
-  if (isMobile && !isExpanded) {
-    return (
-      <>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="fixed top-4 left-4 z-50"
-          onClick={toggleNavbar}
-        >
-          <NavbarAvatar
-            imageUrl={profile?.image_url}
-            name={profile?.name}
-            isExpanded={false}
-          />
-        </Button>
-        <MessagesDialog
-          isOpen={isMessagesOpen}
-          onClose={() => setIsMessagesOpen(false)}
-          userType={userType}
-        />
-      </>
-    );
-  }
 
   return (
     <>
-      <nav 
-        className={`fixed left-0 top-0 h-screen bg-background border-r p-4 flex flex-col transition-all duration-300 z-40
-          ${isExpanded ? 'w-64' : 'w-20'}
-          ${isMobile ? (isExpanded ? 'translate-x-0' : '-translate-x-full') : ''}
+      <nav
+        className={`fixed top-0 left-0 h-screen bg-white border-r transition-all duration-300 z-50
+          ${!isMobile && (isExpanded ? 'w-64' : 'w-20')}
+          ${isMobile ? 'w-full h-16 flex items-center px-4' : ''}
         `}
       >
-        <div className="flex justify-between items-center mb-8">
-          <NavbarAvatar
-            imageUrl={profile?.image_url}
-            name={profile?.name}
+        <div className="h-full flex flex-col">
+          <NavbarLinks
             isExpanded={isExpanded}
+            toggleExpanded={toggleExpanded}
+            isMobile={isMobile}
+            onMessagesClick={() => setIsMessagesOpen(true)}
           />
-          {isMobile && isExpanded && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleNavbar}
-              className="ml-2"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          )}
-        </div>
-
-        <div className={`flex flex-col items-center ${isExpanded ? 'w-full' : 'w-10'}`}>
-          {isExpanded && (
-            <span className="font-semibold text-lg mb-4">{profile?.name}</span>
-          )}
-        </div>
-
-        {!isMobile && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute -right-3 top-8 bg-background border rounded-full shadow-md"
-            onClick={toggleNavbar}
-          >
-            {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </Button>
-        )}
-
-        <NavbarLinks
-          isExpanded={isExpanded}
-          onMessagesClick={() => setIsMessagesOpen(true)}
-        />
-
-        <div className="flex flex-col gap-4 mt-auto">
-          <SocialLinks
-            isExpanded={isExpanded}
-            userType={userType}
-            profile={profile}
-          />
-          <Button
-            variant="ghost"
-            onClick={handleLogout}
-            className={`w-full text-gray-500 hover:text-gray-700 ${!isExpanded && 'px-2'}`}
-          >
-            <LogOut className="h-5 w-5" />
-            {isExpanded && <span className="ml-2">Logout</span>}
-          </Button>
+          <div className="mt-auto">
+            <SocialLinks isExpanded={isExpanded} isMobile={isMobile} />
+            <NavbarAvatar
+              isExpanded={isExpanded}
+              isMobile={isMobile}
+              onLogout={handleLogout}
+            />
+          </div>
         </div>
       </nav>
+
       <MessagesDialog
         isOpen={isMessagesOpen}
         onClose={() => setIsMessagesOpen(false)}
@@ -155,4 +72,4 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
       />
     </>
   );
-};
+}
