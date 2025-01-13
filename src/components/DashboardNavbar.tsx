@@ -22,111 +22,42 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
   const { isExpanded, toggleNavbar } = useNavbar();
   const isMobile = useIsMobile();
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          console.log("No session found");
-          return;
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-        console.log(`Fetching ${userType} profile for user:`, session.user.id);
-        const { data, error } = await supabase
-          .from(userType === "brand" ? "brands" : "creators")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+      const { data, error } = await supabase
+        .from(userType === "brand" ? "brands" : "creators")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .single();
 
-        if (error) {
-          console.error(`Error fetching ${userType} profile:`, error);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: `Failed to load ${userType} profile`,
-          });
-          return;
-        }
-
-        if (!data) {
-          console.log(`No ${userType} profile found`);
-          toast({
-            variant: "destructive",
-            title: "Profile Not Found",
-            description: `No ${userType} profile exists for this user`,
-          });
-          return;
-        }
-
-        console.log(`Fetched ${userType} profile:`, data);
-        setProfile(data);
-      } catch (error) {
-        console.error("Error in fetchProfile:", error);
+      if (error) {
+        console.error("Error fetching profile:", error);
+        return;
       }
+
+      console.log(`Fetched ${userType} profile:`, data);
+      setProfile(data);
     };
 
     fetchProfile();
-  }, [userType, toast]);
+  }, [userType]);
 
   const handleLogout = async () => {
-    if (isLoggingOut) return;
-    
-    setIsLoggingOut(true);
-    try {
-      console.log("Starting logout process...");
-      
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error("Error checking session:", sessionError);
-        navigate("/");
-        return;
-      }
-
-      if (!sessionData.session) {
-        console.log("No active session found, navigating to home");
-        navigate("/");
-        return;
-      }
-
-      // Get the hostname from window.location since we're in a browser
-      const hostname = window.location.hostname.split('.')[0];
-      const key = `sb-${hostname}-auth-token`;
-
-      // Clear any stored session data
-      console.log("Clearing stored session data...");
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-
-      // Attempt to sign out
-      console.log("Attempting to sign out...");
-      const { error: signOutError } = await supabase.auth.signOut();
-
-      if (signOutError) {
-        console.error("Error during sign out:", signOutError);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to sign out. Please try again.",
-        });
-        return;
-      }
-
-      console.log("Successfully signed out");
-      navigate("/");
-      
-    } catch (error) {
-      console.error("Error in handleLogout:", error);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Error signing out:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: "Failed to sign out",
       });
-    } finally {
-      setIsLoggingOut(false);
+      return;
     }
+    navigate("/");
   };
 
   if (isMobile && !isExpanded) {
@@ -180,8 +111,8 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
         </div>
 
         <div className={`flex flex-col items-center ${isExpanded ? 'w-full' : 'w-10'}`}>
-          {isExpanded && profile?.name && (
-            <span className="font-semibold text-lg mb-4">{profile.name}</span>
+          {isExpanded && (
+            <span className="font-semibold text-lg mb-4">{profile?.name}</span>
           )}
         </div>
 
@@ -210,11 +141,10 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
           <Button
             variant="ghost"
             onClick={handleLogout}
-            disabled={isLoggingOut}
             className={`w-full text-gray-500 hover:text-gray-700 ${!isExpanded && 'px-2'}`}
           >
-            <LogOut className="h-5 w-4" />
-            {isExpanded && <span className="ml-2">{isLoggingOut ? "Signing out..." : "Logout"}</span>}
+            <LogOut className="h-5 w-5" />
+            {isExpanded && <span className="ml-2">Logout</span>}
           </Button>
         </div>
       </nav>
@@ -226,5 +156,3 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
     </>
   );
 };
-
-export default DashboardNavbar;

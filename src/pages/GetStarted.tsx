@@ -8,7 +8,6 @@ import { useToast } from "@/components/ui/use-toast";
 
 const GetStarted = () => {
   const [selectedType, setSelectedType] = useState<"brand" | "creator" | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -17,76 +16,57 @@ const GetStarted = () => {
       console.log("Auth state changed:", event, session);
       
       if (event === "SIGNED_IN" && session && selectedType) {
-        setIsLoading(true);
         try {
-          // Get current session to ensure we have fresh tokens
-          const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError) {
-            console.error("Session error:", sessionError);
-            throw sessionError;
-          }
-
-          if (!currentSession) {
-            console.error("No current session found");
-            throw new Error("No active session");
-          }
-
-          console.log("Checking profiles for user:", currentSession.user.id);
-
           if (selectedType === "brand") {
             // Check if brand profile exists
-            const { data: existingBrand, error: brandError } = await supabase
+            const { data: existingBrand, error: fetchError } = await supabase
               .from("brands")
               .select("id")
-              .eq("user_id", currentSession.user.id)
+              .eq("user_id", session.user.id)
               .maybeSingle();
 
-            if (brandError) {
-              console.error("Error checking brand profile:", brandError);
-              throw brandError;
+            if (fetchError) {
+              throw fetchError;
             }
 
             if (!existingBrand) {
-              // Create brand profile
-              const { error: createError } = await supabase
+              // Create brand profile if it doesn't exist
+              const { error: brandError } = await supabase
                 .from("brands")
                 .insert([{ 
-                  user_id: currentSession.user.id, 
-                  name: currentSession.user.email?.split("@")[0] || "New Brand" 
+                  user_id: session.user.id, 
+                  name: session.user.email?.split("@")[0] || "New Brand" 
                 }]);
 
-              if (createError) {
-                console.error("Error creating brand profile:", createError);
-                throw createError;
+              if (brandError) {
+                throw brandError;
               }
             }
 
             navigate("/dashboard/brand");
           } else {
             // Check if creator profile exists
-            const { data: existingCreator, error: creatorError } = await supabase
+            const { data: existingCreator, error: fetchError } = await supabase
               .from("creators")
               .select("id")
-              .eq("user_id", currentSession.user.id)
+              .eq("user_id", session.user.id)
               .maybeSingle();
 
-            if (creatorError) {
-              console.error("Error checking creator profile:", creatorError);
-              throw creatorError;
+            if (fetchError) {
+              throw fetchError;
             }
 
             if (!existingCreator) {
-              // Create creator profile
-              const { error: createError } = await supabase
+              // Create creator profile if it doesn't exist
+              const { error: creatorError } = await supabase
                 .from("creators")
                 .insert([{ 
-                  user_id: currentSession.user.id, 
-                  name: currentSession.user.email?.split("@")[0] || "New Creator" 
+                  user_id: session.user.id, 
+                  name: session.user.email?.split("@")[0] || "New Creator" 
                 }]);
 
-              if (createError) {
-                console.error("Error creating creator profile:", createError);
-                throw createError;
+              if (creatorError) {
+                throw creatorError;
               }
             }
 
@@ -104,8 +84,6 @@ const GetStarted = () => {
             title: "Error",
             description: error.message || "There was a problem setting up your profile",
           });
-        } finally {
-          setIsLoading(false);
         }
       } else if (event === "SIGNED_OUT") {
         navigate("/");
@@ -114,40 +92,31 @@ const GetStarted = () => {
 
     // Check if user is already logged in
     const checkExistingSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error("Session check error:", error);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Check if user has a brand profile
+        const { data: brand } = await supabase
+          .from("brands")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        if (brand) {
+          navigate("/dashboard/brand");
           return;
         }
 
-        if (session) {
-          // Check if user has a brand profile
-          const { data: brand } = await supabase
-            .from("brands")
-            .select("id")
-            .eq("user_id", session.user.id)
-            .maybeSingle();
+        // Check if user has a creator profile
+        const { data: creator } = await supabase
+          .from("creators")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
 
-          if (brand) {
-            navigate("/dashboard/brand");
-            return;
-          }
-
-          // Check if user has a creator profile
-          const { data: creator } = await supabase
-            .from("creators")
-            .select("id")
-            .eq("user_id", session.user.id)
-            .maybeSingle();
-
-          if (creator) {
-            navigate("/dashboard/creator");
-            return;
-          }
+        if (creator) {
+          navigate("/dashboard/creator");
+          return;
         }
-      } catch (error) {
-        console.error("Error checking existing session:", error);
       }
     };
 
@@ -157,6 +126,11 @@ const GetStarted = () => {
       subscription.unsubscribe();
     };
   }, [navigate, toast, selectedType]);
+
+  const handleTypeSelect = async (type: "brand" | "creator") => {
+    console.log(`Selected user type: ${type}`);
+    setSelectedType(type);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-secondary/20 py-16 px-4 sm:px-6 lg:px-8">
@@ -175,8 +149,7 @@ const GetStarted = () => {
                 <Button
                   size="lg"
                   className="w-full bg-gradient-to-r from-[#8B5CF6] via-[#D946EF] to-[#F97316] hover:opacity-90 transition-opacity text-white font-semibold"
-                  onClick={() => setSelectedType("brand")}
-                  disabled={isLoading}
+                  onClick={() => handleTypeSelect("brand")}
                 >
                   Brand
                 </Button>
@@ -184,8 +157,7 @@ const GetStarted = () => {
                   size="lg"
                   variant="outline"
                   className="w-full border-2 border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#8B5CF6]/10"
-                  onClick={() => setSelectedType("creator")}
-                  disabled={isLoading}
+                  onClick={() => handleTypeSelect("creator")}
                 >
                   Creator
                 </Button>
@@ -201,7 +173,6 @@ const GetStarted = () => {
                   variant="ghost"
                   className="text-sm text-gray-500"
                   onClick={() => setSelectedType(null)}
-                  disabled={isLoading}
                 >
                   Change
                 </Button>
@@ -216,6 +187,9 @@ const GetStarted = () => {
                         brand: '#8B5CF6',
                         brandAccent: '#D946EF',
                         brandButtonText: 'white',
+                      },
+                      borderWidths: {
+                        buttonBorder: '2px',
                       },
                       radii: {
                         borderRadiusButton: '0.5rem',
