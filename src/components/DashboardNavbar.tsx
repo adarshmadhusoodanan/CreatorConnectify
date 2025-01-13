@@ -30,6 +30,7 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           console.log("No session found");
+          navigate("/login");
           return;
         }
 
@@ -57,6 +58,7 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
             title: "Profile Not Found",
             description: `No ${userType} profile exists for this user`,
           });
+          navigate("/get-started");
           return;
         }
 
@@ -64,11 +66,12 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
         setProfile(data);
       } catch (error) {
         console.error("Error in fetchProfile:", error);
+        navigate("/login");
       }
     };
 
     fetchProfile();
-  }, [userType, toast]);
+  }, [userType, toast, navigate]);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -77,35 +80,15 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
     try {
       console.log("Starting logout process...");
       
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error("Error checking session:", sessionError);
-        navigate("/");
-        return;
-      }
-
-      if (!sessionData.session) {
-        console.log("No active session found, navigating to home");
-        navigate("/");
-        return;
-      }
-
-      // Get the hostname from window.location since we're in a browser
-      const hostname = window.location.hostname.split('.')[0];
-      const key = `sb-${hostname}-auth-token`;
-
-      // Clear any stored session data
-      console.log("Clearing stored session data...");
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-
-      // Attempt to sign out
-      console.log("Attempting to sign out...");
       const { error: signOutError } = await supabase.auth.signOut();
 
       if (signOutError) {
         console.error("Error during sign out:", signOutError);
+        if (signOutError.message === "session_not_found") {
+          // If session is not found, we can still redirect to login
+          navigate("/login");
+          return;
+        }
         toast({
           variant: "destructive",
           title: "Error",
@@ -115,7 +98,7 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
       }
 
       console.log("Successfully signed out");
-      navigate("/");
+      navigate("/login");
       
     } catch (error) {
       console.error("Error in handleLogout:", error);
@@ -128,6 +111,10 @@ export const DashboardNavbar = ({ userType }: DashboardNavbarProps) => {
       setIsLoggingOut(false);
     }
   };
+
+  if (!profile) {
+    return null;
+  }
 
   if (isMobile && !isExpanded) {
     return (
