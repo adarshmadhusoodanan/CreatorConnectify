@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -132,41 +132,15 @@ export function useMessages(currentUserId: string | null) {
     }
   };
 
+  // Only fetch messages when currentUserId changes
   useEffect(() => {
     if (!currentUserId) {
       console.log("No current user ID, skipping messages fetch");
       return;
     }
 
-    // Initial fetch
     console.log("Initializing messages fetch...");
     fetchMessages();
-
-    // Set up real-time subscription for messages
-    console.log("Setting up real-time subscription for messages");
-    const channel = supabase
-      .channel("messages")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "messages",
-          filter: `sender_id=eq.${currentUserId},receiver_id=eq.${currentUserId}`,
-        },
-        (payload) => {
-          console.log("Real-time message update received:", payload);
-          fetchMessages(); // Refresh messages when we get an update
-        }
-      )
-      .subscribe((status) => {
-        console.log("Subscription status:", status);
-      });
-
-    return () => {
-      console.log("Cleaning up real-time subscription");
-      supabase.removeChannel(channel);
-    };
   }, [currentUserId]);
 
   return { conversations, isLoading };
