@@ -55,7 +55,12 @@ export function DashboardNavbar({ userType }: DashboardNavbarProps) {
             onMessagesClick={() => setIsMessagesOpen(true)}
           />
           <div className="mt-auto">
-            <SocialLinks isExpanded={isExpanded} isMobile={isMobile} />
+            <SocialLinks 
+              isExpanded={isExpanded} 
+              isMobile={isMobile}
+              userType={userType}
+              profile={{}} // Pass an empty profile object for now
+            />
             <NavbarAvatar
               isExpanded={isExpanded}
               isMobile={isMobile}
