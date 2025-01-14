@@ -5,15 +5,24 @@ interface NavbarAvatarProps {
   imageUrl?: string | null;
   name?: string;
   isExpanded: boolean;
+  isMobile: boolean;
+  onLogout: () => Promise<void>;
 }
 
-export const NavbarAvatar = ({ imageUrl, name, isExpanded }: NavbarAvatarProps) => {
+export const NavbarAvatar = ({ imageUrl, name, isExpanded, isMobile, onLogout }: NavbarAvatarProps) => {
   return (
-    <Avatar className={`${isExpanded ? 'h-16 w-16' : 'h-10 w-10'} transition-all duration-300`}>
-      <AvatarImage src={imageUrl || undefined} alt={name || "User"} />
-      <AvatarFallback>
-        <User className={`${isExpanded ? 'h-8 w-8' : 'h-5 w-5'}`} />
-      </AvatarFallback>
-    </Avatar>
+    <div className="flex flex-col items-center gap-2 p-4">
+      <Avatar className={`${isExpanded ? 'h-16 w-16' : 'h-10 w-10'} transition-all duration-300`}>
+        <AvatarImage src={imageUrl || undefined} alt={name || "User"} />
+        <AvatarFallback>
+          <User className={`${isExpanded ? 'h-8 w-8' : 'h-5 w-5'}`} />
+        </AvatarFallback>
+      </Avatar>
+      {isExpanded && (
+        <Button variant="ghost" onClick={onLogout} className="w-full">
+          Logout
+        </Button>
+      )}
+    </div>
   );
 };

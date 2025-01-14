@@ -2,11 +2,12 @@ import { Instagram, Twitter, Youtube, Link } from "lucide-react";
 
 interface SocialLinksProps {
   isExpanded: boolean;
+  isMobile: boolean;
   userType: "brand" | "creator";
   profile: any;
 }
 
-export const SocialLinks = ({ isExpanded, userType, profile }: SocialLinksProps) => {
+export const SocialLinks = ({ isExpanded, isMobile, userType, profile }: SocialLinksProps) => {
   if (!isExpanded) return null;
 
   if (userType === "creator") {

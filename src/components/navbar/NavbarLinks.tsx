@@ -3,10 +3,12 @@ import { UserCog, Globe, Contact, Inbox } from "lucide-react";
 
 interface NavbarLinksProps {
   isExpanded: boolean;
+  toggleExpanded: () => void;
+  isMobile: boolean;
   onMessagesClick: () => void;
 }
 
-export const NavbarLinks = ({ isExpanded, onMessagesClick }: NavbarLinksProps) => {
+export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesClick }: NavbarLinksProps) => {
   if (!isExpanded) return null;
 
   return (
