@@ -25,7 +25,6 @@ export function DashboardNavbar({ userType }: DashboardNavbarProps) {
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error("Error signing out:", error);
-        // If we get a session_not_found error, we can still redirect the user
         if (error.message.includes("session_not_found")) {
           navigate("/");
           return;
@@ -53,13 +52,14 @@ export function DashboardNavbar({ userType }: DashboardNavbarProps) {
             toggleExpanded={toggleExpanded}
             isMobile={isMobile}
             onMessagesClick={() => setIsMessagesOpen(true)}
+            username="iadarshmadhusoodanan"
           />
           <div className="mt-auto">
             <SocialLinks 
               isExpanded={isExpanded} 
               isMobile={isMobile}
               userType={userType}
-              profile={{}} // Pass an empty profile object for now
+              profile={{}}
             />
             <NavbarAvatar
               isExpanded={isExpanded}
