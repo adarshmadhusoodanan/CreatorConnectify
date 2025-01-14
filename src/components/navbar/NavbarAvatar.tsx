@@ -12,7 +12,7 @@ interface NavbarAvatarProps {
 
 export const NavbarAvatar = ({ imageUrl, name, isExpanded, isMobile, onLogout }: NavbarAvatarProps) => {
   return (
-    <div className="flex flex-col items-center gap-2 p-4">
+    <div className="flex flex-col items-center gap-4 p-4">
       <Avatar className={`${isExpanded ? 'h-16 w-16' : 'h-10 w-10'} transition-all duration-300`}>
         <AvatarImage src={imageUrl || undefined} alt={name || "User"} />
         <AvatarFallback>
@@ -20,9 +20,14 @@ export const NavbarAvatar = ({ imageUrl, name, isExpanded, isMobile, onLogout }:
         </AvatarFallback>
       </Avatar>
       {isExpanded && (
-        <Button variant="ghost" onClick={onLogout} className="w-full">
-          Logout
-        </Button>
+        <div className="w-full space-y-2">
+          <Button variant="outline" className="w-full">
+            Edit Profile
+          </Button>
+          <Button variant="ghost" onClick={onLogout} className="w-full">
+            Logout
+          </Button>
+        </div>
       )}
     </div>
   );
