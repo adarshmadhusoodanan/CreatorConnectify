@@ -102,7 +102,10 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
           });
         }
         
-        conversationsMap.get(otherPartyId)?.messages.push(message);
+        conversationsMap.get(otherPartyId)?.messages.push({
+          ...message,
+          isCurrentUserSender: isUserSender
+        });
       });
 
       return Array.from(conversationsMap.values());
@@ -154,17 +157,17 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
                     {conversation.messages.map((message) => (
                       <div 
                         key={message.id} 
-                        className={`flex ${message.sender_id === message.receiver_id ? 'justify-end' : 'justify-start'}`}
+                        className={`flex ${message.isCurrentUserSender ? 'justify-end' : 'justify-start'}`}
                       >
                         <div 
                           className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                            message.sender_id === message.receiver_id
-                              ? 'bg-primary text-white'
-                              : 'bg-gray-100'
+                            message.isCurrentUserSender
+                              ? 'bg-primary text-white ml-auto'
+                              : 'bg-gray-100 mr-auto'
                           }`}
                         >
                           <p className="text-sm">{message.content}</p>
-                          <span className="text-xs opacity-70">
+                          <span className={`text-xs ${message.isCurrentUserSender ? 'text-white/70' : 'text-gray-500'}`}>
                             {format(new Date(message.created_at), 'MMM d, h:mm a')}
                           </span>
                         </div>
