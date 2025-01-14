@@ -189,7 +189,7 @@ const GetStarted = () => {
                         brandButtonText: 'white',
                       },
                       borderWidths: {
-                        buttonBorder: '2px',
+                        buttonBorderWidth: '2px',
                       },
                       radii: {
                         borderRadiusButton: '0.5rem',
