@@ -25,6 +25,7 @@ interface MessagesDialogProps {
 interface Conversation {
   otherParty: {
     id: string;
+    user_id: string;
     name: string;
     image_url: string | null;
   };
@@ -97,6 +98,7 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
           conversationsMap.set(otherPartyId, {
             otherParty: {
               id: profile.id,
+              user_id: profile.user_id,
               name: profile.name,
               image_url: profile.image_url,
             },
@@ -123,15 +125,18 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
       return;
     }
 
+    console.log("Sending message to user_id:", selectedConversation.otherParty.user_id);
+
     const { error } = await supabase
       .from('messages')
       .insert({
         content: newMessage,
         sender_id: session.user.id,
-        receiver_id: selectedConversation.otherParty.id
+        receiver_id: selectedConversation.otherParty.user_id // Using user_id instead of id
       });
 
     if (error) {
+      console.error("Error sending message:", error);
       toast.error("Failed to send message");
       return;
     }
