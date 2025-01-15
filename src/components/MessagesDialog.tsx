@@ -10,7 +10,7 @@ import { Building2, UserRound } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Send } from "lucide-react";
@@ -116,6 +116,14 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
     },
   });
 
+  // Add effect to refetch messages when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log("Dialog opened, refetching messages");
+      refetch();
+    }
+  }, [isOpen, refetch]);
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
@@ -132,7 +140,7 @@ export function MessagesDialog({ isOpen, onClose, userType }: MessagesDialogProp
       .insert({
         content: newMessage,
         sender_id: session.user.id,
-        receiver_id: selectedConversation.otherParty.user_id // Using user_id instead of id
+        receiver_id: selectedConversation.otherParty.user_id
       });
 
     if (error) {
