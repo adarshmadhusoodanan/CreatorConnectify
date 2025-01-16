@@ -24,7 +24,9 @@ const DashboardContent = () => {
         query = query.ilike("name", `%${searchQuery}%`);
       }
       
-      const { data, error } = await query.limit(10);
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .limit(10);
       
       if (error) {
         console.error("Error fetching creators:", error);
@@ -34,8 +36,9 @@ const DashboardContent = () => {
       console.log("Fetched creators:", data);
       return data;
     },
-    // Add refetch interval to keep data fresh
     refetchInterval: 5000,
+    staleTime: 0, // Consider data stale immediately
+    cacheTime: 0, // Don't cache the data
   });
 
   return (
