@@ -59,9 +59,9 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
         )}
       </Button>
 
-      {/* Username */}
+      {/* Username and Avatar */}
       {isExpanded && (
-        <div className="px-4 py-2 mb-4">
+        <div className="px-4 py-2 mb-4 flex items-center gap-3">
           <span className="text-lg font-medium">{username || "User"}</span>
         </div>
       )}
