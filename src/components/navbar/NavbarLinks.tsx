@@ -19,20 +19,26 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
   const { data: profile } = useQuery({
     queryKey: ["creator-profile"],
     queryFn: async () => {
+      console.log("Fetching creator profile...");
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return null;
+      if (!session) {
+        console.log("No session found");
+        return null;
+      }
 
+      console.log("Session found, fetching creator profile for user:", session.user.id);
       const { data, error } = await supabase
         .from('creators')
         .select('*')
         .eq('user_id', session.user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching creator profile:", error);
-        return null;
+        throw error;
       }
 
+      console.log("Creator profile fetch result:", data);
       return data;
     },
   });
