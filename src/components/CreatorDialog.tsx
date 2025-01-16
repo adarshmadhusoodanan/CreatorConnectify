@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { MessageSquare, UserRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CreatorDialogProps {
   creator: {
@@ -17,6 +19,7 @@ interface CreatorDialogProps {
     name: string;
     bio: string | null;
     image_url: string | null;
+    user_id: string;
   } | null;
   isOpen: boolean;
   onClose: () => void;
@@ -24,18 +27,47 @@ interface CreatorDialogProps {
 
 export function CreatorDialog({ creator, isOpen, onClose }: CreatorDialogProps) {
   const [message, setMessage] = useState("");
+  const queryClient = useQueryClient();
 
   const handleSendMessage = async () => {
-    if (!message.trim()) {
+    if (!message.trim() || !creator) {
       toast.error("Please enter a message");
       return;
     }
-    
-    // TODO: Implement message sending functionality
-    console.log("Sending message to creator:", creator?.id, message);
-    toast.success("Message sent successfully!");
-    setMessage("");
-    onClose();
+
+    try {
+      console.log("Sending message to creator user_id:", creator.user_id);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error("You must be logged in to send messages");
+        return;
+      }
+
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          content: message,
+          sender_id: session.user.id,
+          receiver_id: creator.user_id
+        });
+
+      if (error) {
+        console.error("Error sending message:", error);
+        toast.error("Failed to send message");
+        return;
+      }
+
+      // Invalidate and refetch messages query
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      
+      toast.success("Message sent successfully!");
+      setMessage("");
+      onClose();
+    } catch (error) {
+      console.error("Error in handleSendMessage:", error);
+      toast.error("Error sending message");
+    }
   };
 
   if (!creator) return null;

@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Building2, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface BrandDialogProps {
   brand: {
@@ -18,6 +20,7 @@ interface BrandDialogProps {
     description: string | null;
     image_url: string | null;
     website_url: string | null;
+    user_id: string;
   } | null;
   isOpen: boolean;
   onClose: () => void;
@@ -25,18 +28,47 @@ interface BrandDialogProps {
 
 export function BrandDialog({ brand, isOpen, onClose }: BrandDialogProps) {
   const [message, setMessage] = useState("");
+  const queryClient = useQueryClient();
 
   const handleSendMessage = async () => {
-    if (!message.trim()) {
+    if (!message.trim() || !brand) {
       toast.error("Please enter a message");
       return;
     }
-    
-    // TODO: Implement message sending functionality
-    console.log("Sending message to brand:", brand?.id, message);
-    toast.success("Message sent successfully!");
-    setMessage("");
-    onClose();
+
+    try {
+      console.log("Sending message to brand user_id:", brand.user_id);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error("You must be logged in to send messages");
+        return;
+      }
+
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          content: message,
+          sender_id: session.user.id,
+          receiver_id: brand.user_id
+        });
+
+      if (error) {
+        console.error("Error sending message:", error);
+        toast.error("Failed to send message");
+        return;
+      }
+
+      // Invalidate and refetch messages query
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      
+      toast.success("Message sent successfully!");
+      setMessage("");
+      onClose();
+    } catch (error) {
+      console.error("Error in handleSendMessage:", error);
+      toast.error("Error sending message");
+    }
   };
 
   if (!brand) return null;
