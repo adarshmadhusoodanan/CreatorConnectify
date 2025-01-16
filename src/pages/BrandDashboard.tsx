@@ -34,6 +34,8 @@ const DashboardContent = () => {
       console.log("Fetched creators:", data);
       return data;
     },
+    // Add refetch interval to keep data fresh
+    refetchInterval: 5000,
   });
 
   return (
