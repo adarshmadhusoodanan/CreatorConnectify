@@ -52,7 +52,6 @@ export function DashboardNavbar({ userType }: DashboardNavbarProps) {
             toggleExpanded={toggleExpanded}
             isMobile={isMobile}
             onMessagesClick={() => setIsMessagesOpen(true)}
-            username="iadarshmadhusoodanan"
           />
           <div className="mt-auto">
             <SocialLinks 
