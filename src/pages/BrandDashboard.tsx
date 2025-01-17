@@ -36,9 +36,7 @@ const DashboardContent = () => {
       console.log("Fetched creators:", data);
       return data;
     },
-    refetchInterval: 5000,
-    staleTime: 0, // Consider data stale immediately
-    cacheTime: 0, // Don't cache the data
+    refetchInterval: 5000
   });
 
   return (
