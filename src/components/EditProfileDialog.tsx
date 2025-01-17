@@ -98,7 +98,7 @@ export function EditProfileDialog({ isOpen, onClose, currentProfile }: EditProfi
       }
 
       // Invalidate and refetch queries
-      queryClient.invalidateQueries({ queryKey: ["creator-profile"] });
+      await queryClient.invalidateQueries({ queryKey: ["creator-profile"] });
       
       toast.success("Profile updated successfully!");
       onClose();
