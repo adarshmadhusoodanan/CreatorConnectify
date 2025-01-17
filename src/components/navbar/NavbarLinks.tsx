@@ -20,26 +20,22 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
   const { data: profile } = useQuery({
     queryKey: ["creator-profile"],
     queryFn: async () => {
-      console.log("Fetching creator profile...");
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        console.log("No session found");
         return null;
       }
 
-      console.log("Session found, fetching creator profile for user:", session.user.id);
       const { data, error } = await supabase
         .from('creators')
         .select('*')
         .eq('user_id', session.user.id)
-        .maybeSingle();
+        .single();
 
       if (error) {
         console.error("Error fetching creator profile:", error);
         throw error;
       }
 
-      console.log("Creator profile fetch result:", data);
       return data;
     },
   });
@@ -64,7 +60,7 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
       {isExpanded && (
         <div className="flex justify-center mb-6">
           <Avatar className="h-32 w-32">
-            <AvatarImage src={profile?.image_url} alt="Profile" />
+            <AvatarImage src={profile?.image_url || ''} alt="Profile" />
             <AvatarFallback>
               <UserRound className="h-16 w-16" />
             </AvatarFallback>
