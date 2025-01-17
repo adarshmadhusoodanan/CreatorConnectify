@@ -4,16 +4,17 @@ import { useState } from "react";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserRound } from "lucide-react";
 
 interface NavbarLinksProps {
   isExpanded: boolean;
   toggleExpanded: () => void;
   isMobile: boolean;
   onMessagesClick: () => void;
-  username?: string;
 }
 
-export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesClick, username }: NavbarLinksProps) => {
+export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesClick }: NavbarLinksProps) => {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   const { data: profile } = useQuery({
@@ -59,10 +60,15 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
         )}
       </Button>
 
-      {/* Username and Avatar */}
+      {/* Large Profile Avatar */}
       {isExpanded && (
-        <div className="px-4 py-2 mb-4 flex items-center gap-3">
-          <span className="text-lg font-medium">{username || "User"}</span>
+        <div className="flex justify-center mb-6">
+          <Avatar className="h-32 w-32">
+            <AvatarImage src={profile?.image_url} alt="Profile" />
+            <AvatarFallback>
+              <UserRound className="h-16 w-16" />
+            </AvatarFallback>
+          </Avatar>
         </div>
       )}
 
