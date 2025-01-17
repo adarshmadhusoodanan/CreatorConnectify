@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserRound } from "lucide-react";
+import { toast } from "sonner";
 
 interface NavbarLinksProps {
   isExpanded: boolean;
@@ -29,11 +30,14 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
         .from('creators')
         .select('*')
         .eq('user_id', session.user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching creator profile:", error);
-        throw error;
+        if (error.code !== 'PGRST116') { // Don't show toast for "no rows" error
+          toast.error("Failed to load profile");
+        }
+        return null;
       }
 
       return data;
