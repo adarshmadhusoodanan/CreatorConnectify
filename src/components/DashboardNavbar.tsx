@@ -8,7 +8,6 @@ import { useNavbar } from "@/contexts/NavbarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
 
 interface DashboardNavbarProps {
   userType: "brand" | "creator";
@@ -19,24 +18,6 @@ export function DashboardNavbar({ userType }: DashboardNavbarProps) {
   const { isExpanded, toggleExpanded } = useNavbar();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-
-  const { data: profile } = useQuery({
-    queryKey: ["user-profile", userType],
-    queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return null;
-
-      const table = userType === "creator" ? "creators" : "brands";
-      const { data, error } = await supabase
-        .from(table)
-        .select("*")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const handleLogout = async () => {
     try {
@@ -71,21 +52,19 @@ export function DashboardNavbar({ userType }: DashboardNavbarProps) {
             toggleExpanded={toggleExpanded}
             isMobile={isMobile}
             onMessagesClick={() => setIsMessagesOpen(true)}
-            profile={profile}
+            username="iadarshmadhusoodanan"
           />
           <div className="mt-auto">
             <SocialLinks 
               isExpanded={isExpanded} 
               isMobile={isMobile}
               userType={userType}
-              profile={profile || {}}
+              profile={{}}
             />
             <NavbarAvatar
               isExpanded={isExpanded}
               isMobile={isMobile}
               onLogout={handleLogout}
-              imageUrl={profile?.image_url}
-              name={profile?.name}
             />
           </div>
         </div>
