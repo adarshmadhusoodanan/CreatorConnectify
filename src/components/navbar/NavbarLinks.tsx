@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { UserCog, Inbox, ChevronLeft, ChevronRight } from "lucide-react";
+import { UserCog, Inbox, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { useState } from "react";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
+import { ViewProfileDialog } from "@/components/ViewProfileDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,6 +19,7 @@ interface NavbarLinksProps {
 
 export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesClick, userType }: NavbarLinksProps) => {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isViewProfileOpen, setIsViewProfileOpen] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", userType],
@@ -82,6 +84,14 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
         <Button 
           variant="ghost" 
           className="justify-start w-full"
+          onClick={() => setIsViewProfileOpen(true)}
+        >
+          <User className="h-5 w-5 mr-2" />
+          {isExpanded && "View Profile"}
+        </Button>
+        <Button 
+          variant="ghost" 
+          className="justify-start w-full"
           onClick={() => setIsEditProfileOpen(true)}
         >
           <UserCog className="h-5 w-5 mr-2" />
@@ -101,6 +111,13 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
         isOpen={isEditProfileOpen}
         onClose={() => setIsEditProfileOpen(false)}
         currentProfile={profile}
+      />
+
+      <ViewProfileDialog
+        isOpen={isViewProfileOpen}
+        onClose={() => setIsViewProfileOpen(false)}
+        profile={profile}
+        userType={userType}
       />
     </div>
   );
