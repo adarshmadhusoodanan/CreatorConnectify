@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { UserCog, Globe, Contact, Inbox, ChevronLeft, ChevronRight } from "lucide-react";
+import { UserCog, Inbox, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { useQuery } from "@tanstack/react-query";
@@ -13,28 +13,30 @@ interface NavbarLinksProps {
   toggleExpanded: () => void;
   isMobile: boolean;
   onMessagesClick: () => void;
+  userType: "brand" | "creator";
 }
 
-export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesClick }: NavbarLinksProps) => {
+export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesClick, userType }: NavbarLinksProps) => {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   const { data: profile } = useQuery({
-    queryKey: ["creator-profile"],
+    queryKey: ["profile", userType],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         return null;
       }
 
+      const table = userType === 'brand' ? 'brands' : 'creators';
       const { data, error } = await supabase
-        .from('creators')
+        .from(table)
         .select('*')
         .eq('user_id', session.user.id)
         .maybeSingle();
 
       if (error) {
-        console.error("Error fetching creator profile:", error);
-        if (error.code !== 'PGRST116') { // Don't show toast for "no rows" error
+        console.error(`Error fetching ${userType} profile:`, error);
+        if (error.code !== 'PGRST116') {
           toast.error("Failed to load profile");
         }
         return null;
@@ -62,13 +64,16 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
 
       {/* Large Profile Avatar */}
       {isExpanded && (
-        <div className="flex justify-center mb-6">
+        <div className="flex flex-col items-center gap-4 mb-6">
           <Avatar className="h-32 w-32">
             <AvatarImage src={profile?.image_url || ''} alt="Profile" />
             <AvatarFallback>
               <UserRound className="h-16 w-16" />
             </AvatarFallback>
           </Avatar>
+          {profile?.name && (
+            <h3 className="text-lg font-semibold text-center">{profile.name}</h3>
+          )}
         </div>
       )}
 
@@ -81,14 +86,6 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
         >
           <UserCog className="h-5 w-5 mr-2" />
           {isExpanded && "Edit Profile"}
-        </Button>
-        <Button variant="ghost" className="justify-start w-full">
-          <Globe className="h-5 w-5 mr-2" />
-          {isExpanded && "Website"}
-        </Button>
-        <Button variant="ghost" className="justify-start w-full">
-          <Contact className="h-5 w-5 mr-2" />
-          {isExpanded && "Contacts"}
         </Button>
         <Button 
           variant="ghost" 
