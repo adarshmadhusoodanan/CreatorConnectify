@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { UserCog, Inbox, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { EditProfileDialog } from "@/components/EditProfileDialog";
+import { ViewProfileDialog } from "@/components/ViewProfileDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,10 +17,10 @@ interface NavbarLinksProps {
 }
 
 export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesClick, userType }: NavbarLinksProps) => {
-  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const { data: profile } = useQuery({
-    queryKey: ["profile", userType],
+    queryKey: [`${userType}-profile`],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -48,7 +48,6 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
 
   return (
     <div className="flex flex-col w-full">
-      {/* Collapse/Expand Button */}
       <Button
         variant="ghost"
         size="icon"
@@ -62,7 +61,6 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
         )}
       </Button>
 
-      {/* Large Profile Avatar */}
       {isExpanded && (
         <div className="flex flex-col items-center gap-4 mb-6">
           <Avatar className="h-32 w-32">
@@ -77,15 +75,14 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
         </div>
       )}
 
-      {/* Navigation Links */}
       <div className="flex flex-col gap-1 px-2">
         <Button 
           variant="ghost" 
           className="justify-start w-full"
-          onClick={() => setIsEditProfileOpen(true)}
+          onClick={() => setIsProfileOpen(true)}
         >
           <UserCog className="h-5 w-5 mr-2" />
-          {isExpanded && "Edit Profile"}
+          {isExpanded && "Profile"}
         </Button>
         <Button 
           variant="ghost" 
@@ -97,10 +94,11 @@ export const NavbarLinks = ({ isExpanded, toggleExpanded, isMobile, onMessagesCl
         </Button>
       </div>
 
-      <EditProfileDialog
-        isOpen={isEditProfileOpen}
-        onClose={() => setIsEditProfileOpen(false)}
+      <ViewProfileDialog
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
         currentProfile={profile}
+        userType={userType}
       />
     </div>
   );
